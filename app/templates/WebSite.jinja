@@ -1,0 +1,11 @@
+
+{% extends "base.jinja" %}
+
+{% block title %}{{ name }}{% endblock %}
+{% block description %}{{ abstract }}{% endblock %}
+
+{% block body %}
+<article>
+  {{ body|safe }}
+</article>
+{% endblock %}

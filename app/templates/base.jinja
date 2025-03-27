@@ -1,0 +1,32 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    >
+    <title>{% block title %}{% endblock %} | {{ sourceOrganization.name }}</title>
+    <meta name="description" content="{% block description %}{% endblock %}">
+    <link rel="canonical" href="{{ url }}">
+    {{ open_graph_tags|safe }}
+    {{ schema_type_tag|safe }}
+  </head>
+  <body>
+    <nav class="container">
+      <ul>
+        <li><strong>{{ sourceOrganization.name }}</strong></li>
+      </ul>
+      <ul>
+        <li><a href="/">Home</a></li>
+      </ul>
+    </nav>
+
+    <main class="container">
+      {% block body %}{% endblock %}
+    </main>
+  </body>
+</html>
