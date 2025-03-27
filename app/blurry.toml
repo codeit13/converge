@@ -1,7 +1,0 @@
-[blurry]
-domain = "sleebit.com"
-markdown_file_jinja_template_extension = ".jinja"
-
-[blurry.schema_data.sourceOrganization]
-name = "Sleebit"
-url = "https://sleebit.com"

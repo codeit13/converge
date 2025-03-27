@@ -1,0 +1,108 @@
+# Docker Compose configuration
+
+services:
+  # FastAPI Backend Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./app:/app
+      - ./mcp-servers:/app/mcp-servers
+    env_file:
+      - ./app/.env
+    environment:
+      - MONGODB_URL=mongodb://mongo:27017
+      - MONGODB_DB=converge
+    depends_on:
+      - mongo
+      # - medium
+      - sequential
+      - twitter
+      - youtube
+    networks:
+      - converge-network
+
+  # Frontend Vue.js Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    networks:
+      - converge-network
+
+  # MongoDB Service
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - converge-network
+
+  # MCP Servers
+  # medium:
+  #   image: node:18-alpine
+  #   working_dir: /app
+  #   volumes:
+  #     - ./mcp-servers/medium:/app
+  #   command: sh -c "yarn install && node index.js"
+  #   ports:
+  #     - "4002:4002"
+  #   env_file:
+  #     - ./mcp-servers/.env
+  #   networks:
+  #     - converge-network
+
+  sequential:
+    image: node:18-alpine
+    working_dir: /app
+    volumes:
+      - ./mcp-servers/sequential:/app
+    command: sh -c "yarn install && node index.js"
+    ports:
+      - "4003:4003"
+    env_file:
+      - ./mcp-servers/.env
+    networks:
+      - converge-network
+
+  twitter:
+    image: node:18-alpine
+    working_dir: /app
+    volumes:
+      - ./mcp-servers/twitter:/app
+    command: sh -c "yarn install && node index.js"
+    ports:
+      - "4004:4004"
+    env_file:
+      - ./mcp-servers/.env
+    networks:
+      - converge-network
+
+  youtube:
+    image: node:22-slim
+    working_dir: /app
+    volumes:
+      - ./mcp-servers/youtube:/app
+    command: sh -c "apt-get update && apt-get install -y ffmpeg curl python3 && yarn install && yarn build && node dist/index.js"
+    ports:
+      - "4005:4005"
+    env_file:
+      - ./mcp-servers/.env
+    networks:
+      - converge-network
+
+networks:
+  converge-network:
+    driver: bridge
+
+volumes:
+  mongo-data:

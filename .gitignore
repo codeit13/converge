@@ -1,0 +1,7 @@
+converge
+*.pyc
+__pycache__
+node_modules
+*.log
+.env
+.blurry
