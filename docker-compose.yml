@@ -1,72 +1,23 @@
 services:
-  # FastAPI Backend Service
-  api:
-    build:
-      context: ./app
-      dockerfile: Dockerfile
+ # FastAPI Backend Service
+  backend:
+    build: .
     container_name: fastapi-backend
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8001
-    environment:
-      - VIRTUAL_HOST=converge-backend.sleebit.com
-      - VIRTUAL_PORT=8001
-      - LETSENCRYPT_HOST=converge-backend.sleebit.com
-      - LETSENCRYPT_EMAIL=thesleebit@gmail.com
-    networks:
-      - proxy-network
-
-  # Vue.js Frontend (Static Files)
-  static-vue:
-    image: nginx:alpine
-    container_name: static-vue
-    volumes:
-      - ./frontend/dist:/usr/share/nginx/html:ro
-    environment:
-      - VIRTUAL_HOST=ai.sleebit.com
-      - VIRTUAL_PORT=80
-      - LETSENCRYPT_HOST=ai.sleebit.com
-      - LETSENCRYPT_EMAIL=thesleebit@gmail.com
-    networks:
-      - proxy-network
-
-  # Hugo Blog (Static Files)
-  blog:
-    image: nginx:alpine
-    container_name: blog
-    volumes:
-      - ./blog/public:/usr/share/nginx/html:ro
-    environment:
-      - VIRTUAL_HOST=blog.sleebit.com
-      - VIRTUAL_PORT=80
-      - LETSENCRYPT_HOST=blog.sleebit.com
-      - LETSENCRYPT_EMAIL=thesleebit@gmail.com
-    networks:
-      - proxy-network
-
-  # Nginx Reverse Proxy
-  nginx-proxy:
-    image: nginx:alpine
-    container_name: nginx-proxy
     ports:
-      - "80:80"
-      - "443:443"
+      - "8001:8001"
     volumes:
-      - ./nginx:/etc/nginx/conf.d:ro
-      - /etc/letsencrypt:/etc/letsencrypt  # Certificates are stored here
+      - ./blog/content:/app/blog/content  # Sync MD files
+      - /var/run/docker.sock:/var/run/docker.sock  # Allows FastAPI to trigger docker commands
     networks:
-      - proxy-network
-
-  # Certbot for SSL Certificates (one-shot container)
-  certbot:
-    image: certbot/certbot
-    container_name: certbot
+      - app-network
+  hugo:
+    container_name: blog
+    image: klakegg/hugo:ext-alpine
     volumes:
-      - /etc/letsencrypt:/etc/letsencrypt   # Persist certificates on host
-      - ./nginx/certbot:/var/www/certbot      # Webroot for ACME challenge
-    command: >
-      certonly --webroot --webroot-path=/var/www/certbot
-      -d converge-backend.sleebit.com -d ai.sleebit.com -d blog.sleebit.com
-      --email thesleebit@gmail.com --agree-tos --non-interactive
-
+      - ./blog:/src
+    command:  server --bind=0.0.0.0 --port=1313 --watch
+    ports:
+      - "1313:1313"
 networks:
-  proxy-network:
+  app-network:
     driver: bridge

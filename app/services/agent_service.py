@@ -33,17 +33,17 @@ class AgentService:
         self.mcp_config = {
             "youtube": {
                 "command": "node",
-                "args": ["/home/sumit/_Projects/Converge/mcp-servers/youtube/dist/index.js"],
+                "args": ["mcp-servers/youtube/dist/index.js"],
                 "transport": "stdio"
             },
             "sequential": {
                 "command": "node",
-                "args": ["/home/sumit/_Projects/Converge/mcp-servers/sequential/dist/index.js"],
+                "args": ["mcp-servers/sequential/dist/index.js"],
                 "transport": "stdio"
             },
             "twitter": {
                 "command": "node",
-                "args": ["/home/sumit/_Projects/Converge/mcp-servers/twitter/dist/index.js"],
+                "args": ["mcp-servers/twitter/dist/index.js"],
                 "transport": "stdio"
             }
         }
