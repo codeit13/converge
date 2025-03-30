@@ -22,13 +22,10 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
 
 app = FastAPI(title="Converge API", version="1.0.0", lifespan=lifespan)
-origins = [
-    "*",
-]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
