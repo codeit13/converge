@@ -47,7 +47,7 @@ async def run_agent(request: Request, query: RunRequest):
 async def stream_agent(request: Request, query: StreamRequest) -> StreamingResponse:
     print(f"Stream endpoint called with prompt: {query.prompt}")
     agent_service: AgentService = request.app.state.agent_service
-    
+
     try:
         # Create a background task to save the history after streaming completes
         async def save_history():
@@ -67,14 +67,19 @@ async def stream_agent(request: Request, query: StreamRequest) -> StreamingRespo
         response = StreamingResponse(
             agent_service.stream(query.prompt),
             media_type="text/event-stream",
+            headers={
+                "Access-Control-Allow-Origin": "*",       # CORS header
+                "Access-Control-Allow-Methods": "*",    # Allowed methods
+                "Access-Control-Allow-Headers": "*",      # Allowed headers
+            },
             background=save_history
         )
-        
+
         # Add CORS headers to ensure the stream works in the browser
         response.headers["Cache-Control"] = "no-cache"
         response.headers["Connection"] = "keep-alive"
         response.headers["X-Accel-Buffering"] = "no"  # Disable proxy buffering
-        
+
         print("Streaming response setup complete, returning to client")
         return response
     except Exception as e:
@@ -96,7 +101,7 @@ async def test_stream():
     This is useful for debugging streaming issues without involving the agent.
     """
     print("Test stream endpoint called")
-    
+
     async def generate_test_stream():
         # Send a few test messages with different types
         messages = [
@@ -104,22 +109,22 @@ async def test_stream():
             {"type": "observation", "content": "This is a test observation"},
             {"type": "answer", "content": "This is a test answer"},
         ]
-        
+
         # Send each message with a delay
         for i, msg in enumerate(messages):
             print(f"Sending test message {i+1}/{len(messages)}: {msg}")
             data = json.dumps(msg)
             yield f"data: {data}\n\n"
             await asyncio.sleep(1)  # Wait 1 second between messages
-    
+
     response = StreamingResponse(
         generate_test_stream(),
         media_type="text/event-stream"
     )
-    
+
     # Add CORS headers
     response.headers["Cache-Control"] = "no-cache"
     response.headers["Connection"] = "keep-alive"
     response.headers["X-Accel-Buffering"] = "no"
-    
+
     return response

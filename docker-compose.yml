@@ -13,8 +13,8 @@ services:
     mongodb:
       container_name: mongodb
       image: mongo:6.0
-      ports:
-        - "27019:27017" # Uncomment if you run on local, and have mongo installed locally
+      # ports:
+        # - "27019:27017" # Uncomment if you run on local, and have mongo installed locally
       volumes:
         - /home/ubuntu/converge-mongo-data:/data/db # Persist MongoDB data with full path
       networks:

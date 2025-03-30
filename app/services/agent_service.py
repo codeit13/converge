@@ -59,6 +59,7 @@ class AgentService:
         memory = MemorySaver()
         self.mcp_client = MultiServerMCPClient(self.mcp_config)
         await self.mcp_client.__aenter__()
+
         tools = self.mcp_client.get_tools()
         self.agent = create_react_agent(self.model, tools, checkpointer=memory)
 
@@ -115,39 +116,43 @@ class AgentService:
                 elif "agent" in chunk:
                     # Handle agent response format with messages
                     # print(f"Agent response found in chunk")
-                    
                     # Check if there are tool calls in the message
                     if chunk["agent"].get("messages") and len(chunk["agent"]["messages"]) > 0:
                         message = chunk["agent"]["messages"][0]
-                        
+
                         # Check for tool_calls in additional_kwargs
                         if hasattr(message, "additional_kwargs") and message.additional_kwargs.get("tool_calls"):
                             tool_calls = message.additional_kwargs["tool_calls"]
                             tool_names = []
-                            
+
                             # Extract tool names from tool_calls
                             for tool_call in tool_calls:
                                 if "function" in tool_call and "name" in tool_call["function"]:
-                                    tool_names.append(tool_call["function"]["name"])
-                            
+                                    tool_names.append(
+                                        tool_call["function"]["name"])
+
                             # If we found tool names, send a thinking message
                             if tool_names:
                                 thinking_msg = f"Calling {', '.join(tool_names)} {'tool' if len(tool_names) == 1 else 'tools'}..."
-                                thinking_data = json.dumps({"type": "thinking", "content": thinking_msg})
+                                thinking_data = json.dumps(
+                                    {"type": "thinking", "content": thinking_msg})
                                 yield f"data: {thinking_data}\n\n"
-                        
+
                         # Check for tool_calls directly on the message
                         elif hasattr(message, "tool_calls") and message.tool_calls:
-                            tool_names = [tool_call.get("name", "unknown tool") for tool_call in message.tool_calls]
-                            
+                            tool_names = [tool_call.get(
+                                "name", "unknown tool") for tool_call in message.tool_calls]
+
                             # If we found tool names, send a thinking message
                             if tool_names:
                                 thinking_msg = f"Calling {', '.join(tool_names)} {'tool' if len(tool_names) == 1 else 'tools'}..."
-                                thinking_data = json.dumps({"type": "thinking", "content": thinking_msg})
+                                thinking_data = json.dumps(
+                                    {"type": "thinking", "content": thinking_msg})
                                 yield f"data: {thinking_data}\n\n"
-                    
+
                     # Send the serialized chunk
-                    data = json.dumps({"type": "chunk", "data": serializable_chunk})
+                    data = json.dumps(
+                        {"type": "chunk", "data": serializable_chunk})
                     yield f"data: {data}\n\n"
 
                 elif "actions" in chunk:
@@ -213,10 +218,11 @@ class AgentService:
             return obj
 
     async def shutdown(self):
-        """
-        Shutdown the agent service.
-
-        This method closes the MultiServerMCPClient.
-        """
+        """Shutdown the agent service gracefully."""
         if self.mcp_client:
-            await self.mcp_client.__aexit__(None, None, None)
+            try:
+                # Use proper async context exit handling
+                await self.mcp_client.__aexit__(None, None, None)
+                print("MCP client shutdown successfully.")
+            except Exception as e:
+                print(f"Error during MCP shutdown: {e}")
