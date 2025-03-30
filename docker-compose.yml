@@ -10,8 +10,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock  # Allows FastAPI to trigger docker commands
     networks:
       - converge-network
+    depends_on:
+      converge_mongodb:
+        condition: service_healthy # Wait until MongoDB is healthy before starting
+
   mongodb:
-    container_name: mongodb
+    container_name: converge_mongodb
     image: mongo:6.0
     # ports:
       # - "27019:27017" # Uncomment if you run on local, and have mongo installed locally
