@@ -9,7 +9,22 @@ services:
       - ./blog/content:/app/blog/content  # Sync MD files
       - /var/run/docker.sock:/var/run/docker.sock  # Allows FastAPI to trigger docker commands
     networks:
-      - app-network
+      - converge-network
+    mongodb:
+      container_name: mongodb
+      image: mongo:6.0
+      ports:
+        - "27019:27017" # Uncomment if you run on local, and have mongo installed locally
+      volumes:
+        - /home/ubuntu/converge-mongo-data:/data/db # Persist MongoDB data with full path
+      networks:
+        - converge-network
+      healthcheck:
+        test: echo 'db.runCommand("ping").ok' | mongosh --quiet mongodb:27017/test
+        interval: 30s
+        timeout: 10s
+        retries: 5
+      restart: always
   hugo:
     container_name: blog
     image: klakegg/hugo:ext-alpine
@@ -19,5 +34,5 @@ services:
     ports:
       - "1313:1313"
 networks:
-  app-network:
+  converge-network:
     driver: bridge
