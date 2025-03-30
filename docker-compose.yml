@@ -1,5 +1,5 @@
 services:
- # FastAPI Backend Service
+  # FastAPI Backend Service
   backend:
     build: .
     container_name: fastapi-backend
@@ -11,16 +11,15 @@ services:
     networks:
       - converge-network
     depends_on:
-      converge_mongodb:
-        condition: service_healthy # Wait until MongoDB is healthy before starting
+      mongodb:
+        condition: service_healthy  # Wait until MongoDB is healthy before starting
 
+  # MongoDB Service
   mongodb:
     container_name: converge_mongodb
     image: mongo:6.0
-    # ports:
-      # - "27019:27017" # Uncomment if you run on local, and have mongo installed locally
     volumes:
-      - /home/ubuntu/converge-mongo-data:/data/db # Persist MongoDB data with full path
+      - /home/ubuntu/converge-mongo-data:/data/db  # Persist MongoDB data with full path
     networks:
       - converge-network
     healthcheck:
@@ -29,14 +28,18 @@ services:
       timeout: 10s
       retries: 5
     restart: always
+
+  # Hugo Blog Service
   hugo:
     container_name: blog
     image: klakegg/hugo:ext-alpine
     volumes:
       - ./blog:/src
-    command:  server --bind=0.0.0.0 --port=1313 --watch
+    command: server --bind=0.0.0.0 --port=1313 --watch
     ports:
       - "1313:1313"
+
+# Docker Network
 networks:
   converge-network:
     driver: bridge
