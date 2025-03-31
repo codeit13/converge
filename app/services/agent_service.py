@@ -93,102 +93,72 @@ class AgentService:
         response_text = result.get("response", "")
         article_content = self.is_article_output(response_text)
         if article_content:
-            await self.publish_article(article_content)
+            filename = await self.publish_article(article_content)
+            result["filename"] = filename
         return result
 
     async def stream(self, prompt: str):
-        """
-        Run the agent with the given messages and stream the response.
-
-        If the agent is not initialized, it will be initialized first.
-        Yields Server-Sent Events (SSE) formatted chunks for streaming to the frontend.
-        Checks for article output in streamed chunks and calls publish_article if found.
-        """
+        """Asynchronously process a prompt and stream responses via SSE."""
         if not self.agent:
             await self.initialize()
 
-        # Send an initial message to confirm the stream is working
-        initial_data = json.dumps(
-            {"type": "thinking", "content": "Starting to process your request..."})
-        yield f"data: {initial_data}\n\n"
-
-        published_article = False  # flag to ensure we publish only once per stream
+        # Send initial message
+        yield self._sse_format("thinking", "Starting to process your request...")
 
         try:
-            # Simple counter for debugging
-            chunk_count = 0
             config = {"configurable": {"thread_id": "1"}}
             inputs = {"messages": [("user", prompt)]}
 
             async for chunk in self.agent.astream(inputs, config, stream_mode="updates"):
-                chunk_count += 1
-                print(f"Received chunk {chunk_count}:", chunk)
-                # Convert the chunk to a serializable format
                 serializable_chunk = self._make_serializable(chunk)
 
-                # Check for article markers if the chunk contains an "output" key
-                if "output" in chunk:
-                    article_content = self.is_article_output(chunk["output"])
-                    if article_content and not published_article:
-                        await self.publish_article(article_content)
-                        published_article = True
+                # if "output" in chunk:
+                #     article_content = self.is_article_output(chunk["output"])
+                #     if article_content:
+                #         await self.publish_article(article_content)
+                #     yield self._sse_format("chunk", serializable_chunk)
 
-                    data = json.dumps(
-                        {"type": "chunk", "data": serializable_chunk})
-                    yield f"data: {data}\n\n"
+                if "agent" in chunk:
+                    tool_names = self._extract_tool_names(chunk["agent"])
+                    if tool_names:
+                        thinking_msg = f"Calling {', '.join(tool_names)}..."
+                        yield self._sse_format("thinking", thinking_msg)
 
-                elif "agent" in chunk:
-                    # Handle potential tool calls in agent messages
-                    if chunk["agent"].get("messages") and len(chunk["agent"]["messages"]) > 0:
-                        message = chunk["agent"]["messages"][0]
-                        if hasattr(message, "additional_kwargs") and message.additional_kwargs.get("tool_calls"):
-                            tool_calls = message.additional_kwargs["tool_calls"]
-                            tool_names = []
-                            for tool_call in tool_calls:
-                                if "function" in tool_call and "name" in tool_call["function"]:
-                                    tool_names.append(
-                                        tool_call["function"]["name"])
-                            if tool_names:
-                                thinking_msg = f"Calling {', '.join(tool_names)} {'tool' if len(tool_names) == 1 else 'tools'}..."
-                                thinking_data = json.dumps(
-                                    {"type": "thinking", "content": thinking_msg})
-                                yield f"data: {thinking_data}\n\n"
-                        elif hasattr(message, "tool_calls") and message.tool_calls:
-                            tool_names = [tool_call.get(
-                                "name", "unknown tool") for tool_call in message.tool_calls]
-                            if tool_names:
-                                thinking_msg = f"Calling {', '.join(tool_names)} {'tool' if len(tool_names) == 1 else 'tools'}..."
-                                thinking_data = json.dumps(
-                                    {"type": "thinking", "content": thinking_msg})
-                                yield f"data: {thinking_data}\n\n"
-                    data = json.dumps(
-                        {"type": "chunk", "data": serializable_chunk})
-                    yield f"data: {data}\n\n"
+                    content = serializable_chunk['agent'].get(
+                        "messages", [])[0].get("content", "")
+                    article_content = self.is_article_output(content)
+                    if article_content:
+                        filename = await self.publish_article(article_content)
+                        serializable_chunk['agent']['messages'][0]['filename'] = filename
+                    yield self._sse_format("chunk", serializable_chunk)
 
-                elif "actions" in chunk:
-                    data = json.dumps(
-                        {"type": "chunk", "data": serializable_chunk})
-                    yield f"data: {data}\n\n"
-
-                elif "steps" in chunk and chunk["steps"]:
-                    data = json.dumps(
-                        {"type": "chunk", "data": serializable_chunk})
-                    yield f"data: {data}\n\n"
                 else:
-                    data = json.dumps(
-                        {"type": "chunk", "data": serializable_chunk})
-                    yield f"data: {data}\n\n"
+                    yield self._sse_format("chunk", serializable_chunk)
 
-            # Send a completion message
-            completion_data = json.dumps(
-                {"type": "info", "content": "Stream processing complete"})
-            yield f"data: {completion_data}\n\n"
+            # Send completion message
+            yield self._sse_format("info", "Stream processing complete")
 
         except Exception as e:
             error_msg = f"Error in stream processing: {str(e)}"
-            print(error_msg)
-            error_data = json.dumps({"type": "error", "content": error_msg})
-            yield f"data: {error_data}\n\n"
+            yield self._sse_format("error", error_msg)
+
+    def _sse_format(self, event_type: str, content):
+        """Helper function to format messages for SSE."""
+        data = json.dumps({"type": event_type, "content": content})
+        return f"data: {data}\n\n"
+
+    def _extract_tool_names(self, agent_chunk):
+        """Extract tool names from agent chunk."""
+        tool_names = []
+        messages = agent_chunk.get("messages", [])
+        for message in messages:
+            tool_calls = message.get(
+                "additional_kwargs", {}).get("tool_calls", [])
+            for tool_call in tool_calls:
+                tool_name = tool_call.get("function", {}).get("name")
+                if tool_name:
+                    tool_names.append(tool_name)
+        return tool_names
 
     async def publish_article(self, article: str):
         """
@@ -209,8 +179,10 @@ class AgentService:
                 # Write the article content to the file.
                 f.write(article)
             print(f"Article published successfully at {file_path}")
+            return filename
         except Exception as e:
             print(f"Error publishing article: {e}")
+            return None
 
     def is_article_output(self, text: str):
         """
