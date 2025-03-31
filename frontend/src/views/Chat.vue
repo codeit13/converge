@@ -14,14 +14,21 @@
           <div class="flex items-center gap-2">
             <Bot class="h-5 w-5 md:h-6 md:w-6 text-primary" />
             <div>
-              <CardTitle class="font-display text-lg md:text-xl">Chat with AI</CardTitle>
+              <CardTitle class="font-display text-lg md:text-xl"
+                >Chat with AI</CardTitle
+              >
               <CardDescription class="text-xs md:text-sm">
                 Ask questions or give instructions
               </CardDescription>
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <Button variant="ghost" size="sm" class="text-xs md:text-sm" @click="clearChat">
+            <Button
+              variant="ghost"
+              size="sm"
+              class="text-xs md:text-sm"
+              @click="clearChat"
+            >
               <RefreshCw class="h-3.5 w-3.5 mr-1" />
               New Chat
             </Button>
@@ -77,7 +84,9 @@
             <div
               class="rounded-2xl bg-primary text-primary-foreground p-3 shadow-sm break-words w-full"
             >
-              <p class="font-medium text-sm md:text-base">{{ message.content }}</p>
+              <p class="font-medium text-sm md:text-base">
+                {{ message.content }}
+              </p>
             </div>
             <Avatar class="h-8 w-8 shrink-0">
               <AvatarImage src="" />
@@ -90,13 +99,15 @@
           <!-- Thinking indicator for tool calls and processing -->
           <div
             v-if="message.thinkingMessage"
-            class="animate-pulse thinking-indicator ml-10 md:ml-12 mb-2 max-w-[80%]"
+            class="animate-pulse thinking-indicator ml-10 md:ml-8 mb-2 max-w-[80%]"
           >
             <div class="thinking-indicator-icon">
               <Lightbulb class="h-3.5 w-3.5" />
             </div>
             <div class="thinking-indicator-content">
-              <span class="text-xs md:text-sm">{{ message.thinkingMessage }}</span>
+              <span class="text-xs md:text-sm">{{
+                message.thinkingMessage
+              }}</span>
               <div class="typing-animation">
                 <div class="typing-dot"></div>
                 <div class="typing-dot"></div>
@@ -129,7 +140,7 @@
             >
               <div
                 v-if="message.content"
-                v-html="formatMessage(message.content)"
+                v-html="formatMessage(message)"
                 class="prose prose-sm max-w-none dark:prose-invert"
               ></div>
               <div v-else class="flex items-center space-x-2">
@@ -205,20 +216,16 @@
         <!-- Response type toggle and options -->
         <div class="flex items-center justify-between mb-3 px-1">
           <div class="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               class="text-xs h-7 px-2"
               @click="clearChat"
             >
               <RefreshCw class="h-3 w-3 mr-1" />
               New Chat
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              class="text-xs h-7 px-2"
-            >
+            <Button variant="outline" size="sm" class="text-xs h-7 px-2">
               <Copy class="h-3 w-3 mr-1" />
               Copy
             </Button>
@@ -239,7 +246,7 @@
             <span class="text-xs text-muted-foreground">Streaming</span>
           </div>
         </div>
-        
+
         <form @submit.prevent="sendMessage" class="flex space-x-2 md:space-x-3">
           <div class="relative flex-1 items-center justify-center">
             <Input
@@ -389,23 +396,24 @@ export default {
       this.userInput = "";
       this.isLoading = false;
       this.streamingResponse = "";
-      
+
       // Add a welcome system message
       this.messages.push({
         role: "system",
         content: "Conversation started",
       });
     },
-    
+
     copyConversation() {
       // Format the conversation for copying
       const formattedConversation = this.messages
-        .filter(message => message.role !== "system")
-        .map(message => {
-          const role = message.role === 'user' ? 'User' : 'AI';
+        .filter((message) => message.role !== "system")
+        .map((message) => {
+          const role = message.role === "user" ? "User" : "AI";
           return `${role}: ${message.content}`;
-        }).join('\n\n');
-      
+        })
+        .join("\n\n");
+
       // Use existing copyToClipboard method
       this.copyToClipboard(formattedConversation);
     },
@@ -653,9 +661,16 @@ export default {
       });
     },
 
-    formatMessage(content) {
+    formatMessage(message) {
+      let content = message?.content ?? "";
       // Convert markdown to HTML and sanitize
       if (!content) return "";
+
+      if (message?.filename)
+        content += `\n\nYour article is published at https://blog.sleebit.com/${message.filename.replace(
+          /\.md$/,
+          ""
+        )}`;
       const html = marked(content);
       return DOMPurify.sanitize(html);
     },
