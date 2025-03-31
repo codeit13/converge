@@ -67,11 +67,6 @@ async def stream_agent(request: Request, query: StreamRequest) -> StreamingRespo
         response = StreamingResponse(
             agent_service.stream(query.prompt),
             media_type="text/event-stream",
-            headers={
-                "Access-Control-Allow-Origin": "*",       # CORS header
-                "Access-Control-Allow-Methods": "*",    # Allowed methods
-                "Access-Control-Allow-Headers": "*",      # Allowed headers
-            },
             background=save_history
         )
 
