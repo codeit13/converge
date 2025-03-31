@@ -35,7 +35,7 @@ services:
     image: klakegg/hugo:ext-alpine
     volumes:
       - ./blog:/src
-    command: server --bind=0.0.0.0 --port=1313 --watch
+    command: server --bind=0.0.0.0 --port=1313 --watch --renderToDisk
     ports:
       - "1313:1313"
 
