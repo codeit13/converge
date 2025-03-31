@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Sleebit</title>
-    <link>http://localhost:1313/</link>
+    <link>https://sleebit.com/</link>
     <description>Recent content on Sleebit</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
     <copyright>Blogs at Sleebit © 2025</copyright>
-    <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://sleebit.com/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title></title>
-      <link>http://localhost:1313/about/</link>
+      <link>https://sleebit.com/about/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>http://localhost:1313/about/</guid>
+      <guid>https://sleebit.com/about/</guid>
       <description></description>
       
     </item>
