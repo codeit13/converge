@@ -1,6 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import StreamingResponse
+from langchain_core.messages import AIMessage
 from pydantic import BaseModel
 from datetime import datetime
 from models.run_history import RunHistory
@@ -40,7 +41,9 @@ async def run_agent(request: Request, query: RunRequest):
     run_doc = RunHistory(query=query.message,
                          response=response_content, timestamp=datetime.utcnow())
     await run_doc.insert()
-    return {"response": result.get("messages", [])[-1].content}
+    messages: List[AIMessage] = result.get("messages", [])
+
+    return {"response": messages[-1].content if messages else ""}
 
 
 @router.post("/stream")
