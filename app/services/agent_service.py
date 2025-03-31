@@ -111,13 +111,13 @@ class AgentService:
             inputs = {"messages": [("user", prompt)]}
 
             async for chunk in self.agent.astream(inputs, config, stream_mode="updates"):
-                serializable_chunk = self._make_serializable(chunk)
+                chunk = self._make_serializable(chunk)
 
                 # if "output" in chunk:
                 #     article_content = self.is_article_output(chunk["output"])
                 #     if article_content:
                 #         await self.publish_article(article_content)
-                #     yield self._sse_format("chunk", serializable_chunk)
+                #     yield self._sse_format("chunk", chunk)
 
                 if "agent" in chunk:
                     tool_names = self._extract_tool_names(chunk["agent"])
@@ -130,16 +130,17 @@ class AgentService:
                     article_content = self.is_article_output(content)
                     if article_content:
                         filename = await self.publish_article(article_content)
-                        serializable_chunk['agent']['messages'][0]['filename'] = filename
-                    yield self._sse_format("chunk", serializable_chunk)
+                        chunk['agent']['messages'][0]['filename'] = filename
+                    yield self._sse_format("chunk", chunk)
 
                 else:
-                    yield self._sse_format("chunk", serializable_chunk)
+                    yield self._sse_format("chunk", chunk)
 
             # Send completion message
             yield self._sse_format("info", "Stream processing complete")
 
         except Exception as e:
+            print(e)
             error_msg = f"Error in stream processing: {str(e)}"
             yield self._sse_format("error", error_msg)
 
