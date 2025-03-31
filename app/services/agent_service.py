@@ -124,7 +124,7 @@ class AgentService:
                         thinking_msg = f"Calling {', '.join(tool_names)}..."
                         yield self._sse_format("thinking", thinking_msg)
 
-                    content = serializable_chunk['agent'].get(
+                    content = chunk["agent"].get(
                         "messages", [])[0].get("content", "")
                     article_content = self.is_article_output(content)
                     if article_content:
