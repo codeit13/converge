@@ -144,9 +144,9 @@ class AgentService:
             error_msg = f"Error in stream processing: {str(e)}"
             yield self._sse_format("error", error_msg)
 
-    def _sse_format(self, event_type: str, content):
+    def _sse_format(self, event_type: str, chunk):
         """Helper function to format messages for SSE."""
-        data = json.dumps({"type": event_type, "content": content})
+        data = json.dumps({"type": event_type, "data": chunk})
         return f"data: {data}\n\n"
 
     def _extract_tool_names(self, agent_chunk):
@@ -213,11 +213,15 @@ class AgentService:
     def _make_serializable(self, obj):
         """Convert objects to JSON serializable format"""
         if isinstance(obj, (AIMessage, HumanMessage, SystemMessage)):
-            return {
+            result = {
                 "type": obj.__class__.__name__,
                 "content": obj.content,
-                "additional_kwargs": obj.additional_kwargs
             }
+
+            for key in dir(obj):
+                if not key.startswith("_") and key != "content":
+                    result[key] = getattr(obj, key)
+            return result
         elif isinstance(obj, dict):
             return {k: self._make_serializable(v) for k, v in obj.items()}
         elif isinstance(obj, list):
