@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Blowfish</title>
-    <link>https://sleebit.com/</link>
-    <description>Recent content on Blowfish</description>
+    <title>Sleebit</title>
+    <link>http://localhost:1313/</link>
+    <description>Recent content on Sleebit</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <copyright>© 2025 </copyright>
-    <atom:link href="https://sleebit.com/index.xml" rel="self" type="application/rss+xml" />
+    <copyright>Blogs at Sleebit © 2025</copyright>
+    <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title></title>
-      <link>https://sleebit.com/about/</link>
+      <link>http://localhost:1313/about/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://sleebit.com/about/</guid>
+      <guid>http://localhost:1313/about/</guid>
       <description></description>
       
     </item>

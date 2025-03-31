@@ -11,6 +11,7 @@ The service provides methods to run the agent and run a stream of messages.
 import asyncio
 import json
 import os
+import random
 import re
 from datetime import datetime
 from langchain_openai import ChatOpenAI
@@ -171,13 +172,22 @@ class AgentService:
 
         # Generate a unique filename using the current UTC timestamp
         timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-        filename = f"article_{timestamp}.md"
-        file_path = os.path.join(self.CONTENT_DIR, filename)
+        foldername = f"article_{timestamp}"
+        file_path = os.path.join(
+            self.CONTENT_DIR, '/Posts/', foldername, 'index.md')
 
         try:
             with open(file_path, "w", encoding="utf-8") as f:
                 # Write the article content to the file.
-                f.write(article)
+                # Add front matter
+                front_matter = f"""
+                ---
+                title: f"Blog #{random.randint(1, 1000)}"
+                date: {datetime.now().strftime("%Y-%m-%d")}
+                layout: "simple"
+                ---
+                """
+                f.write(front_matter + article)
             print(f"Article published successfully at {file_path}")
             return filename
         except Exception as e:
