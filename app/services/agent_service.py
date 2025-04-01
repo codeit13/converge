@@ -19,6 +19,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from config import settings
+from utils.helpers import error_handler
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 
@@ -58,6 +59,7 @@ class AgentService:
         # Ensure this path is correct relative to your FastAPI docker container.
         self.CONTENT_DIR = "/app/blog/content"
 
+    @error_handler
     async def initialize(self):
         """
         Initialize the agent service.
@@ -75,6 +77,7 @@ class AgentService:
         self.agent = create_react_agent(
             prompt=prompt, model=self.model, tools=tools, checkpointer=memory)
 
+    @error_handler
     async def run(self, messages: list) -> dict:
         """
         Run the agent with the given messages.
@@ -98,6 +101,7 @@ class AgentService:
             result["filename"] = filename
         return result
 
+    @error_handler
     async def stream(self, prompt: str):
         """Asynchronously process a prompt and stream responses via SSE."""
         if not self.agent:
@@ -113,13 +117,15 @@ class AgentService:
             async for chunk in self.agent.astream(inputs, config, stream_mode="updates"):
                 chunk = self._make_serializable(chunk)
 
-                # if "output" in chunk:
-                #     article_content = self.is_article_output(chunk["output"])
-                #     if article_content:
-                #         await self.publish_article(article_content)
-                #     yield self._sse_format("chunk", chunk)
+                print(chunk)
 
-                if "agent" in chunk:
+                if "output" in chunk:
+                    article_content = self.is_article_output(chunk["output"])
+                    if article_content:
+                        await self.publish_article(article_content)
+                    yield self._sse_format("chunk", chunk)
+
+                elif "agent" in chunk:
                     tool_names = self._extract_tool_names(chunk["agent"])
                     if tool_names:
                         thinking_msg = f"Calling {', '.join(tool_names)}..."
@@ -162,6 +168,7 @@ class AgentService:
                     tool_names.append(tool_name)
         return tool_names
 
+    @error_handler
     async def publish_article(self, article: str):
         """
         Publish the article extracted from the agent output.
@@ -195,6 +202,7 @@ class AgentService:
             print(f"Error publishing article: {e}")
             return None
 
+    @error_handler
     def is_article_output(self, text: str):
         """
         Check if the given text contains an article block.
@@ -210,6 +218,7 @@ class AgentService:
         print("No article block found")
         return None
 
+    @error_handler
     def _make_serializable(self, obj):
         """Convert objects to JSON serializable format"""
         if isinstance(obj, (AIMessage, HumanMessage, SystemMessage)):
@@ -235,6 +244,7 @@ class AgentService:
         else:
             return obj
 
+    @error_handler
     async def shutdown(self):
         """Shutdown the agent service gracefully."""
         if self.mcp_client:
