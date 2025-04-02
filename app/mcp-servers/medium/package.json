@@ -1,5 +1,5 @@
 {
-  "name": "@anaisbetts/mcp-medium",
+  "name": "mcp-medium",
   "version": "0.6.0",
   "description": "Medium API MCP Server - A microservice for interacting with Medium's API to publish content and manage user accounts",
   "main": "index.js",

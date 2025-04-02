@@ -1,7 +1,7 @@
 languageCode = "en"
 languageName = "English"
 weight = 1
-title = "Sleebit"
+title = "Sleebit Blogs"
 
 [params]
   displayName = "EN"
@@ -19,10 +19,7 @@ title = "Sleebit"
   image = "img/sumit.png"
   imageQuality = 96
   headline = "Full-Stack Developer with expertise in AI based RAG app and Web3 platforms."
-  bio = """I am a Full-Stack Developer specializing in AI-powered applications and Web3 platforms.  
-With a focus on scalability, security, and maintainability, I build efficient web solutions.  
-Passionate about emerging technologies, I explore machine learning's role in web development.  
-As a strong advocate of open-source, I actively seek opportunities to contribute to the community."""
+  bio = """I am a Full-Stack Developer specializing in AI-powered applications and Web3 platforms."""
   links = [
      { email = "mailto:thesleebit@gmail.com" },
      { github = "https://github.com/codeit13" },

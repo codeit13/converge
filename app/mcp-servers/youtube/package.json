@@ -1,5 +1,5 @@
 {
-  "name": "@anaisbetts/mcp-youtube",
+  "name": "mcp-youtube",
   "version": "0.6.0",
   "bin": {
     "mcp-youtube": "dist/index.js"
@@ -12,7 +12,6 @@
     "build": "rimraf dist && tsc",
     "test": "jest"
   },
-  "author": "Ani Betts <anais@anaisbetts.org>",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.7.0",
