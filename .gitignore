@@ -7,3 +7,4 @@ node_modules
 .blurry
 blog/public
 blog/content/Posts
+blog/resources
