@@ -82,7 +82,7 @@ async def stream_agent(request: Request, query: StreamRequest) -> StreamingRespo
         return response
     except Exception as e:
         error_msg = f"Error in stream_agent: {str(e)}"
-        print(error_msg)
+        print(e)
         raise HTTPException(status_code=500, detail=error_msg)
 
 

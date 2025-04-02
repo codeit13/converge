@@ -221,7 +221,9 @@ class AgentService:
     @error_handler
     def _make_serializable(self, obj):
         """Convert objects to JSON serializable format"""
-        if isinstance(obj, (AIMessage, HumanMessage, SystemMessage)):
+        if callable(obj):
+            return repr(obj)
+        elif isinstance(obj, (AIMessage, HumanMessage, SystemMessage)):
             result = {
                 "type": obj.__class__.__name__,
                 "content": obj.content,
