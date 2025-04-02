@@ -122,7 +122,8 @@ class AgentService:
                 if "output" in chunk:
                     article_content = self.is_article_output(chunk["output"])
                     if article_content:
-                        await self.publish_article(article_content)
+                        articlePath = await self.publish_article(article_content)
+                        chunk['agent']['messages'][0]['filename'] = articlePath
                     yield self._sse_format("chunk", chunk)
 
                 elif "agent" in chunk:
@@ -135,8 +136,8 @@ class AgentService:
                         "messages", [])[0].get("content", "")
                     article_content = self.is_article_output(content)
                     if article_content:
-                        filename = await self.publish_article(article_content)
-                        chunk['agent']['messages'][0]['filename'] = filename
+                        articlePath = await self.publish_article(article_content)
+                        chunk['agent']['messages'][0]['filename'] = articlePath
                     yield self._sse_format("chunk", chunk)
 
                 else:
@@ -155,6 +156,7 @@ class AgentService:
         data = json.dumps({"type": event_type, "data": chunk})
         return f"data: {data}\n\n"
 
+    @error_handler
     def _extract_tool_names(self, agent_chunk):
         """Extract tool names from agent chunk."""
         tool_names = []
@@ -162,11 +164,12 @@ class AgentService:
             messages = agent_chunk['messages']
             for message in messages:
                 if 'additional_kwargs' in message:
-                    tool_calls = message['additional_kwargs']['tool_calls']
-                    for tool_call in tool_calls:
-                        tool_name = tool_call.get('function', {}).get('name')
-                        if tool_name:
-                            tool_names.append(tool_name)
+                    if 'tool_calls' in message['additional_kwargs']:
+                        tool_calls = message['additional_kwargs']['tool_calls']
+                        for tool_call in tool_calls:
+                            tool_name = tool_call['function']['name']
+                            if tool_name:
+                                tool_names.append(tool_name)
         return tool_names
 
     @error_handler
