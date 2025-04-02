@@ -158,14 +158,15 @@ class AgentService:
     def _extract_tool_names(self, agent_chunk):
         """Extract tool names from agent chunk."""
         tool_names = []
-        messages = agent_chunk.get("messages", [])
-        for message in messages:
-            tool_calls = message.get(
-                "additional_kwargs", {}).get("tool_calls", [])
-            for tool_call in tool_calls:
-                tool_name = tool_call.get("function", {}).get("name")
-                if tool_name:
-                    tool_names.append(tool_name)
+        if 'messages' in agent_chunk:
+            messages = agent_chunk['messages']
+            for message in messages:
+                if 'additional_kwargs' in message:
+                    tool_calls = message['additional_kwargs']['tool_calls']
+                    for tool_call in tool_calls:
+                        tool_name = tool_call.get('function', {}).get('name')
+                        if tool_name:
+                            tool_names.append(tool_name)
         return tool_names
 
     @error_handler
@@ -181,8 +182,9 @@ class AgentService:
         # Generate a unique filename using the current UTC timestamp
         timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
         foldername = f"article_{timestamp}"
+        articlePath = f"/Posts/{foldername}"
         file_path = os.path.join(
-            self.CONTENT_DIR, '/Posts/', foldername, 'index.md')
+            self.CONTENT_DIR, articlePath, 'index.md')
 
         try:
             with open(file_path, "w", encoding="utf-8") as f:
@@ -197,7 +199,7 @@ class AgentService:
                 """
                 f.write(front_matter + article)
             print(f"Article published successfully at {file_path}")
-            return filename
+            return articlePath.lower()
         except Exception as e:
             print(f"Error publishing article: {e}")
             return None
