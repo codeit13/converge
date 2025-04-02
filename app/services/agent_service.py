@@ -115,9 +115,8 @@ class AgentService:
             inputs = {"messages": [("user", prompt)]}
 
             async for chunk in self.agent.astream(inputs, config, stream_mode="updates"):
+                # print("chunk: ", chunk)
                 chunk = self._make_serializable(chunk)
-
-                print(chunk)
 
                 if "output" in chunk:
                     article_content = self.is_article_output(chunk["output"])
@@ -210,17 +209,15 @@ class AgentService:
     @error_handler
     def is_article_output(self, text: str):
         """
-        Check if the given text contains an article block.
+        Extracts the article content from the given text enclosed by '---' markers.
         Returns the inner article content if found, otherwise returns None.
         """
-        print(type(text))
-        pattern = re.compile(r"```article(.*?)```", re.DOTALL)
-        match = pattern.search(text)
+        # Pattern to match content between '---' markers
+        pattern_dashes = re.compile(r"---\s*(.*?)\s*---", re.DOTALL)
+        match = pattern_dashes.search(text)
         if match:
-            print("Article block found")
             return match.group(1).strip()
 
-        print("No article block found")
         return None
 
     @error_handler
@@ -229,14 +226,21 @@ class AgentService:
         if callable(obj):
             return repr(obj)
         elif isinstance(obj, (AIMessage, HumanMessage, SystemMessage)):
+            # Optionally adjust the type name (e.g., "AIMessage" -> "ai")
+            type_name = obj.__class__.__name__
+            if type_name.endswith("Message"):
+                type_name = type_name[:-len("Message")].lower()
             result = {
-                "type": obj.__class__.__name__,
+                "type": type_name,
                 "content": obj.content,
             }
-
-            for key in dir(obj):
+            # Use __dict__ to iterate only over instance attributes
+            for key, value in obj.__dict__.items():
                 if not key.startswith("_") and key != "content":
-                    result[key] = getattr(obj, key)
+                    if callable(value):
+                        result[key] = repr(value)
+                    else:
+                        result[key] = self._make_serializable(value)
             return result
         elif isinstance(obj, dict):
             return {k: self._make_serializable(v) for k, v in obj.items()}
@@ -246,7 +250,10 @@ class AgentService:
             result = {}
             for key, value in obj.__dict__.items():
                 if not key.startswith("_"):
-                    result[key] = self._make_serializable(value)
+                    if callable(value):
+                        result[key] = repr(value)
+                    else:
+                        result[key] = self._make_serializable(value)
             return result
         else:
             return obj
