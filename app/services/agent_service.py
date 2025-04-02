@@ -19,8 +19,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from config import settings
-from utils.helpers import error_handler
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from utils.helpers import error_handler, extract_json_from_string, extract_tool_names, make_serializable, publish_article, sse_format
 
 
 class AgentService:
@@ -58,6 +57,10 @@ class AgentService:
         # Define the directory where markdown files will be stored.
         # Ensure this path is correct relative to your FastAPI docker container.
         self.CONTENT_DIR = "/app/blog/content"
+        # self.CONTENT_DIR = os.path.join(
+        #     os.path.dirname(os.getcwd()), "blog", "content")
+
+        print(f"Content directory: {self.CONTENT_DIR}")
 
     @error_handler
     async def initialize(self):
@@ -70,7 +73,36 @@ class AgentService:
         self.mcp_client = MultiServerMCPClient(self.mcp_config)
         await self.mcp_client.__aenter__()
 
-        prompt = """You are an expert content writer with 10+years of experience in writing SEO ready articles, that rank in top 1st, 2nd article on google search index.
+        prompt = """
+        You are an expert SEO writer who creates markdown articles that rank #1 on Google. Follow these rules:  
+
+        **SEO Guidelines:**  
+        1. Include primary keyword in title + 1-2 secondary keywords  
+        2. Use H2/H3 headings with keyword variations  
+        3. Add meta description (155-160 chars)  
+        4. Include 3-5 internal links and 2 authority external links  
+        5. Use schema-ready FAQ section when relevant  
+
+        **Content Structure Rules:**  
+        1. Strict markdown formatting  
+        2. Optional HTML only for:  
+        - Complex tables  
+        - Custom anchor links  
+        - Schema markup (FAQ/HowTo)  
+        3. Mobile-friendly layout:  
+        - Short paragraphs (2-3 sentences)  
+        - Bullet points for lists  
+        - Bold/italic for key terms  
+
+        **Response Format:**  
+        When sharing the article, ALWAYS use this JSON structure:  
+        {  
+            "title": "SEO Title Here",  
+            "article": "Full content in markdown...",  
+            "articleSlug": "seo-friendly-url-slug",  
+            "focusKeywords": ["primary", "secondary"],  
+            "metaDescription": "Search-friendly snippet under 160 chars"  
+        }  
         """
 
         tools = self.mcp_client.get_tools()
@@ -95,10 +127,10 @@ class AgentService:
 
         # Check if the output contains an article block
         response_text = result.get("response", "")
-        article_content = self.is_article_output(response_text)
-        if article_content:
-            filename = await self.publish_article(article_content)
-            result["filename"] = filename
+        article_data = extract_json_from_string(response_text)
+        if article_data:
+            articleSlug = await publish_article(self.CONTENT_DIR, article_data)
+            result["articleSlug"] = articleSlug
         return result
 
     @error_handler
@@ -108,7 +140,7 @@ class AgentService:
             await self.initialize()
 
         # Send initial message
-        yield self._sse_format("thinking", "Starting to process your request...")
+        yield sse_format("thinking", "Starting to process your request...")
 
         try:
             config = {"configurable": {"thread_id": "1"}}
@@ -116,147 +148,38 @@ class AgentService:
 
             async for chunk in self.agent.astream(inputs, config, stream_mode="updates"):
                 # print("chunk: ", chunk)
-                chunk = self._make_serializable(chunk)
+                chunk = make_serializable(chunk)
 
                 if "output" in chunk:
-                    article_content = self.is_article_output(chunk["output"])
-                    if article_content:
-                        articlePath = await self.publish_article(article_content)
-                        chunk['agent']['messages'][0]['filename'] = articlePath
-                    yield self._sse_format("chunk", chunk)
+                    article_data = extract_json_from_string(chunk["output"])
+                    if article_data:
+                        articleSlug = await publish_article(self.CONTENT_DIR, article_data)
+                        chunk['agent']['messages'][0]['articleSlug'] = articleSlug
+                    yield sse_format("chunk", chunk)
 
                 elif "agent" in chunk:
-                    tool_names = self._extract_tool_names(chunk["agent"])
+                    tool_names = extract_tool_names(chunk["agent"])
                     if tool_names:
                         thinking_msg = f"Calling {', '.join(tool_names)}..."
-                        yield self._sse_format("thinking", thinking_msg)
+                        yield sse_format("thinking", thinking_msg)
 
                     content = chunk["agent"].get(
                         "messages", [])[0].get("content", "")
-                    article_content = self.is_article_output(content)
-                    if article_content:
-                        articlePath = await self.publish_article(article_content)
-                        chunk['agent']['messages'][0]['filename'] = articlePath
-                    yield self._sse_format("chunk", chunk)
+                    article_data = extract_json_from_string(content)
+                    if article_data:
+                        articleSlug = await publish_article(self.CONTENT_DIR, article_data)
+                    yield sse_format("chunk", chunk)
 
                 else:
-                    yield self._sse_format("chunk", chunk)
+                    yield sse_format("chunk", chunk)
 
             # Send completion message
-            yield self._sse_format("info", "Stream processing complete")
+            yield sse_format("info", "Stream processing complete")
 
         except Exception as e:
             print(e)
             error_msg = f"Error in stream processing: {str(e)}"
-            yield self._sse_format("error", error_msg)
-
-    def _sse_format(self, event_type: str, chunk):
-        """Helper function to format messages for SSE."""
-        data = json.dumps({"type": event_type, "data": chunk})
-        return f"data: {data}\n\n"
-
-    @error_handler
-    def _extract_tool_names(self, agent_chunk):
-        """Extract tool names from agent chunk."""
-        tool_names = []
-        if 'messages' in agent_chunk:
-            messages = agent_chunk['messages']
-            for message in messages:
-                if 'additional_kwargs' in message:
-                    if 'tool_calls' in message['additional_kwargs']:
-                        tool_calls = message['additional_kwargs']['tool_calls']
-                        for tool_call in tool_calls:
-                            tool_name = tool_call['function']['name']
-                            if tool_name:
-                                tool_names.append(tool_name)
-        return tool_names
-
-    @error_handler
-    async def publish_article(self, article: str):
-        """
-        Publish the article extracted from the agent output.
-        This method writes the article to a Markdown file in the content directory.
-        """
-        # Ensure the content directory exists
-        if not os.path.exists(self.CONTENT_DIR):
-            os.makedirs(self.CONTENT_DIR)
-
-        # Generate a unique filename using the current UTC timestamp
-        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-        foldername = f"article_{timestamp}"
-        articlePath = f"/Posts/{foldername}"
-        file_path = os.path.join(
-            self.CONTENT_DIR, articlePath, 'index.md')
-
-        try:
-            with open(file_path, "w", encoding="utf-8") as f:
-                # Write the article content to the file.
-                # Add front matter
-                front_matter = f"""
-                ---
-                title: f"Blog #{random.randint(1, 1000)}"
-                date: {datetime.now().strftime("%Y-%m-%d")}
-                layout: "simple"
-                ---
-                """
-                f.write(front_matter + article)
-            print(f"Article published successfully at {file_path}")
-            return articlePath.lower()
-        except Exception as e:
-            print(f"Error publishing article: {e}")
-            return None
-
-    @error_handler
-    def is_article_output(self, text: str):
-        """
-        Extracts the article content from the given text enclosed by '---' markers.
-        Returns the inner article content if found, otherwise returns None.
-        """
-        # Pattern to match content between '---' markers
-        pattern_dashes = re.compile(r"---\s*(.*?)\s*---", re.DOTALL)
-        match = pattern_dashes.search(text)
-        if match:
-            return match.group(1).strip()
-
-        return None
-
-    @error_handler
-    def _make_serializable(self, obj):
-        """Convert objects to JSON serializable format"""
-        if callable(obj):
-            return repr(obj)
-        elif isinstance(obj, (AIMessage, HumanMessage, SystemMessage)):
-            # Optionally adjust the type name (e.g., "AIMessage" -> "ai")
-            type_name = obj.__class__.__name__
-            if type_name.endswith("Message"):
-                type_name = type_name[:-len("Message")].lower()
-            result = {
-                "type": type_name,
-                "content": obj.content,
-            }
-            # Use __dict__ to iterate only over instance attributes
-            for key, value in obj.__dict__.items():
-                if not key.startswith("_") and key != "content":
-                    if callable(value):
-                        result[key] = repr(value)
-                    else:
-                        result[key] = self._make_serializable(value)
-            return result
-        elif isinstance(obj, dict):
-            return {k: self._make_serializable(v) for k, v in obj.items()}
-        elif isinstance(obj, list):
-            return [self._make_serializable(item) for item in obj]
-        elif hasattr(obj, "__dict__"):
-            result = {}
-            for key, value in obj.__dict__.items():
-                if not key.startswith("_"):
-                    if callable(value):
-                        result[key] = repr(value)
-                    else:
-                        result[key] = self._make_serializable(value)
-            return result
-        else:
-            return obj
+            yield sse_format("error", error_msg)
 
     @error_handler
     async def shutdown(self):

@@ -4,19 +4,15 @@
   weight = 10
 
 [[main]]
-  name = "Topics"
-  pageRef = "topics"
-  weight = 20
+  identifier = "twitter"
+  pre = "x-twitter"
+  url = "https://twitter.com/thesleebit"
+  weight = 30
 
-[[subnavigation]]
-  name = "An interesting topic"
-  pageRef = "tags/interesting-topic"
-  weight = 10
-  
 [[main]]
-  identifier = "github2"
+  identifier = "github"
   pre = "github"
-  url = "https://github.com/nunocoracao/blowfish"
+  url = "https://github.com/codeit13/converge"
   weight = 40
 
 [[footer]]

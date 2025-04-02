@@ -1,4 +1,3 @@
-disabled = false
 languageCode = "en"
 languageName = "English"
 weight = 1
@@ -11,25 +10,21 @@ title = "Sleebit"
   dateFormat = "2 January 2006"
   # logo = "img/logo.png"
   # secondaryLogo = "img/secondary-logo.png"
-  # description = "My Blog Website"
+  description = "My Blog Website"
   copyright = "Blogs at Sleebit © 2025"
 
-# [params.author]
-#   name = "Sumit Chauhan"
-#   email = "thesleebit@gmail.com"
-#   image = "img/sumit.png"
-#   imageQuality = 96
-#   headline = "Full-Stack Developer with expertise in AI based RAG app and Web3 platforms."
-  bio = """
-    I am a Full-Stack Developer with expertise in developing AI-based Recommendation Algorithm (RAG) apps and Web3 platforms. I have experience in developing scalable, secure and maintainable web applications. I am passionate about learning new technologies and staying up-to-date with the latest trends in the field. I am also interested in machine learning and its applications in the field of web development. I am a strong believer in the power of open-source software and I am always looking for ways to contribute to the community.
-  """
-   links = [
+[params.author]
+  name = "Sumit Chauhan"
+  email = "thesleebit@gmail.com"
+  image = "img/sumit.png"
+  imageQuality = 96
+  headline = "Full-Stack Developer with expertise in AI based RAG app and Web3 platforms."
+  bio = """I am a Full-Stack Developer specializing in AI-powered applications and Web3 platforms.  
+With a focus on scalability, security, and maintainability, I build efficient web solutions.  
+Passionate about emerging technologies, I explore machine learning's role in web development.  
+As a strong advocate of open-source, I actively seek opportunities to contribute to the community."""
+  links = [
      { email = "mailto:thesleebit@gmail.com" },
-     { link = "https://ai.sleebit.com" },
-     { amazon = "https://www.amazon.com/hz/wishlist/ls/wishlist-id" },
      { github = "https://github.com/codeit13" },
-     { instagram = "https://instagram.com/astropsumit" },
-     { linkedin = "https://linkedin.com/in/sumit02" },
-     { medium = "https://medium.com/username" },
-     { twitter = "https://twitter.com/thesleebit" },
+     { x-twitter = "https://twitter.com/thesleebit" },
    ]

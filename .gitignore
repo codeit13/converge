@@ -5,3 +5,5 @@ node_modules
 *.log
 .env
 .blurry
+blog/public
+blog/content/Posts

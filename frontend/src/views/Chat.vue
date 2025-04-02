@@ -81,16 +81,14 @@
             }"
             class="flex items-start gap-2 ml-auto max-w-[85%] md:max-w-[75%] lg:max-w-[70%] px-1"
           >
-            <div
-              class="rounded-2xl bg-primary text-primary-foreground p-3 shadow-sm break-words w-full"
-            >
+            <div class="rounded-2xl p-3 shadow-sm break-words w-full">
               <p class="font-medium text-sm md:text-base">
                 {{ message.content }}
               </p>
             </div>
             <Avatar class="h-8 w-8 shrink-0">
               <AvatarImage src="" />
-              <AvatarFallback class="bg-primary text-primary-foreground">
+              <AvatarFallback>
                 <User class="h-4 w-4" />
               </AvatarFallback>
             </Avatar>
@@ -663,15 +661,49 @@ export default {
 
     formatMessage(message) {
       let content = message?.content ?? "";
-      // Convert markdown to HTML and sanitize
       if (!content) return "";
 
-      if (message?.filename)
-        content += `\n\nYour article is published at https://blog.sleebit.com/${message.filename.replace(
-          /\.md$/,
-          ""
-        )}`;
-      const html = marked(content);
+      // Check if content is valid JSON and contains articleSlug.
+      let JSONContent = false;
+      try {
+        JSONContent = JSON.parse(content);
+      } catch (e) {
+        // Not JSON, so continue as markdown.
+      }
+
+      if (JSONContent && JSONContent.articleSlug) {
+        const baseUrl = window.location.href.includes("localhost")
+          ? "http://localhost:1313"
+          : "https://blog.sleebit.com";
+        // Use the provided title if available; otherwise, fall back to the URL text.
+        const linkText =
+          JSONContent.title || `${baseUrl}/posts/${JSONContent.articleSlug}`;
+        content = `Your article is published at <a href="${baseUrl}/posts/${JSONContent.articleSlug}" target="_blank" rel="nofollow noopener noreferrer">${linkText}</a>`;
+      }
+
+      // Create a custom renderer for marked.
+      // const renderer = new marked.Renderer();
+      const renderer = {
+        link({ href, title, text, tokens }) {
+          // Check if link is external.
+          const isExternal = !href.startsWith(
+            `${location.protocol}//${location.host}`
+          );
+          // Use this.parser.parseInline to render any inline markdown within the link text.
+          const renderedText = tokens ? marked.parseInline(tokens) : text;
+          if (isExternal) {
+            return `<a href="${href}" title="${
+              title || ""
+            }" target="_blank" rel="nofollow noopener noreferrer">${renderedText}</a>`;
+          }
+          return `<a href="${href}" title="${title || ""}">${renderedText}</a>`;
+        },
+      };
+
+      marked.use({ renderer });
+
+      // Parse the markdown content with the custom renderer.
+      const html = marked.parse(content);
       return DOMPurify.sanitize(html);
     },
 
