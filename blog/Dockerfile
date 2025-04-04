@@ -1,13 +1,14 @@
-# app/blog/Dockerfile
-FROM node:20-alpine as builder
-WORKDIR /app
-# Install Hugo globally via Yarn
-RUN yarn global add hugo
-COPY . .
-# Build the Hugo site; by default Hugo outputs to the "public" folder.
-RUN hugo
+FROM klakegg/hugo:exts
 
-FROM nginx:alpine
-COPY --from=builder /app/public /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+WORKDIR /src
+# Copy your Hugo project files
+COPY . /src
+
+# Install inotify-tools to watch for changes
+RUN apk add --no-cache inotify-tools
+
+# Copy auto-rebuild script
+COPY watch.sh /src/watch.sh
+RUN chmod +x /src/watch.sh
+
+CMD ["/src/watch.sh"]

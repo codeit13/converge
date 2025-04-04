@@ -1,10 +1,11 @@
-# app/frontend/Dockerfile
-FROM node:20-alpine as build
-WORKDIR /app
-COPY . .
-RUN yarn install --frozen-lockfile && yarn run build
+FROM node:20-alpine as builder
 
-FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+WORKDIR /src
+COPY . .
+RUN npm install
+RUN npm run build
+
+# Final stage: copy built files
+FROM node:20-alpine
+WORKDIR /dist
+COPY --from=builder /src/dist .
