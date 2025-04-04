@@ -4,8 +4,8 @@ import { z } from "zod";
 import os from "node:os";
 import fs from "node:fs";
 import path from "node:path";
-import { spawnPromise } from "spawn-rx";
 import { rimraf } from "rimraf";
+import { youtubeDl } from "youtube-dl-exec";
 
 const server = new McpServer({
   name: "mcp-youtube",
@@ -24,20 +24,14 @@ server.tool(
     const tempDir = fs.mkdtempSync(`${os.tmpdir()}${path.sep}youtube-`);
     try {
       // Run yt-dlp to download subtitles in VTT format
-      await spawnPromise(
-        "yt-dlp",
-        [
-          "--write-sub",
-          "--write-auto-sub",
-          "--sub-lang",
-          "en",
-          "--skip-download",
-          "--sub-format",
-          "vtt",
-          url,
-        ],
-        { cwd: tempDir, detached: true }
-      );
+      await youtubeDl(url, {
+        writeSub: true,
+        writeAutoSub: true,
+        subLang: "en",
+        skipDownload: true,
+        subFormat: "vtt",
+        output: `${tempDir}/%(title)s.%(ext)s`,
+      });
 
       let content = "";
       fs.readdirSync(tempDir).forEach((file) => {

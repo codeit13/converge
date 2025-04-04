@@ -16,7 +16,8 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.7.0",
     "rimraf": "^6.0.1",
-    "spawn-rx": "^4.0.0"
+    "spawn-rx": "^4.0.0",
+    "youtube-dl-exec": "^3.0.20"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
