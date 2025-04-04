@@ -1,11 +1,11 @@
+# Stage 1: Build stage
 FROM node:20-alpine as builder
-
 WORKDIR /src
 COPY . .
 RUN npm install
 RUN npm run build
 
-# Final stage: copy built files
+# Stage 2: Final stage - Copy build output to /built_dist
 FROM node:20-alpine
-WORKDIR /dist
+WORKDIR /built_dist
 COPY --from=builder /src/dist .

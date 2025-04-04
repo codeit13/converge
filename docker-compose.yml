@@ -29,37 +29,24 @@ services:
       retries: 5
     restart: always
 
-  # Hugo Blog Service
-  # hugo:
-  #   container_name: blog
-  #   image: klakegg/hugo:ext-alpine
-  #   volumes:
-  #     - ./blog:/src
-  #   command: server --bind=0.0.0.0 --port=1313 --watch --renderToDisk
-  #   ports:
-  #     - "1313:1313"
-
   hugo:
     build:
       context: ./blog
-      dockerfile: Dockerfile.hugo
+      dockerfile: Dockerfile
     container_name: hugo_builder
     volumes:
       - /var/www/blog:/src/public
       - ./blog:/src  # so changes in the repo reflect inside the container
     restart: always
-  
+
   vue:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.vue
+      dockerfile: Dockerfile
     container_name: vue_app
     volumes:
-      - /var/www/converge-frontend:/src/dist
-    command: "sh -c 'npm run build && cp -R dist/ /mounted-frontend'"
-    # We'll mount /mounted-frontend to host below
-
-
+      - /var/www/converge-frontend:/target
+    command: ["sh", "-c", "if [ -z \"$(ls -A /target)\" ]; then cp -R /built_dist/* /target/; fi && tail -f /dev/null"]
 
 # Docker Network
 networks:

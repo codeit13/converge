@@ -1,4 +1,4 @@
-FROM klakegg/hugo:exts
+FROM klakegg/hugo:ext-alpine
 
 WORKDIR /src
 # Copy your Hugo project files
@@ -8,7 +8,11 @@ COPY . /src
 RUN apk add --no-cache inotify-tools
 
 # Copy auto-rebuild script
-COPY watch.sh /src/watch.sh
-RUN chmod +x /src/watch.sh
+#COPY watch.sh /src/watch.sh
+#RUN chmod +x /src/watch.sh
 
-CMD ["/src/watch.sh"]
+#RUN chmod +x /src/watch.sh
+#CMD ["/bin/sh", "/src/watch.sh"]
+
+CMD ["server", "--bind=0.0.0.0", "--watch", "--renderToDisk", "--destination", "/src/public"]
+
