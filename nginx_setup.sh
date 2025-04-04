@@ -39,3 +39,25 @@ done
 echo "Reloading Nginx..."
 sudo systemctl reload nginx
 echo "Deployment completed successfully."
+
+# Cron job line we want to add
+CRON_JOB="0 0 * * * /usr/bin/docker system prune -af --volumes > /dev/null 2>&1"
+
+# Get the current crontab for root (or current user if running as non-root)
+CURRENT_CRON=$(crontab -l 2>/dev/null)
+
+# Check if our cron job is already in place
+if echo "$CURRENT_CRON" | grep -Fq "/usr/bin/docker system prune -af --volumes"; then
+  echo "Docker cleanup cron job already exists. Skipping setup."
+  exit 0
+fi
+
+# Append our cron job to the existing cron jobs (if any) and install new crontab
+(
+  # Print current cron jobs, if any
+  echo "$CURRENT_CRON"
+  # Append new cron job
+  echo "$CRON_JOB"
+) | crontab -
+
+echo "Docker cleanup cron job added successfully."

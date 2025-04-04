@@ -161,6 +161,14 @@ def extract_tool_names(agent_chunk):
     return tool_names
 
 
+def sanitize_title(title: str) -> str:
+    """Remove or replace problematic characters in the title."""
+    title = title.replace(":", " -")  # Replace ':' with ' -'
+    # Remove problematic YAML characters
+    title = re.sub(r'["\'|>#*]', '', title)
+    return title.strip()
+
+
 @error_handler
 async def publish_article(CONTENT_DIR, article_data: dict):
     """
@@ -181,8 +189,10 @@ async def publish_article(CONTENT_DIR, article_data: dict):
 
     try:
         with open(file_path, "w", encoding="utf-8") as f:
+            title = sanitize_title(article_data['title'])
             # Write the article content to the file.
-            front_matter = f"""\n---\ntitle: {article_data['title']}\ndate: {datetime.now().strftime("%Y-%m-%d")}\nslug: {article_data['articleSlug']}\n---\n""".strip()
+            front_matter = f"""\n---\ntitle: {title}\ndate: {datetime.now().strftime("%Y-%m-%d")}\nslug: {article_data['articleSlug']}\n---\n""".strip(
+            )
 
             f.write(front_matter + "\n\n" + article_data['article'])
         print(f"Article published successfully at {file_path}")
