@@ -37,7 +37,7 @@ server.tool(
       fs.readdirSync(tempDir).forEach((file) => {
         const fileContent = fs.readFileSync(path.join(tempDir, file), "utf8");
         const cleanedContent = stripVttNonContent(fileContent);
-        content += `${file}\n====================\n${cleanedContent}\n`;
+        content += `${file}\n===================\n${cleanedContent}\n`;
       });
 
       return {
