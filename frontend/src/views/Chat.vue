@@ -37,7 +37,7 @@
       </CardHeader>
 
       <CardContent
-        class="flex-1 overflow-y-auto px-0 py-6 md:p-6 mx-20 space-y-6 custom-scrollbar"
+        class="flex-1 overflow-y-auto px-0 py-6 md:p-6 md:mx-20 space-y-6 custom-scrollbar"
         id="chat-container"
         ref="chatContainer"
       >
@@ -488,7 +488,7 @@ export default {
     },
   },
   mounted() {
-    this.$store.commit("SET_SIDEBAR_OPEN", false);
+    // this.$store.commit("SET_SIDEBAR_OPEN", false);
     const inputComponent = this.$refs.messageInput;
     if (inputComponent && inputComponent.$el) {
       const inputElement = inputComponent.$el.querySelector("input");
@@ -498,7 +498,7 @@ export default {
     }
   },
   unmounted() {
-    this.$store.commit("SET_SIDEBAR_OPEN", true);
+    // this.$store.commit("SET_SIDEBAR_OPEN", true);
   },
   methods: {
     openLink(link) {

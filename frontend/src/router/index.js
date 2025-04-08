@@ -5,21 +5,13 @@ const routes = [
   {
     path: "/",
     name: "Dashboard",
-    component: () => import("@/views/Dashboard.vue"),
-    meta: { requiresAuth: true },
-  },
-
-  // App Routes being here
-  {
-    path: "/workflows",
-    name: "Workflows",
-    component: () => import("@/views/Workflows.vue"),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: "/chat",
-    name: "Chat",
     component: () => import("@/views/Chat.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/analytics",
+    name: "Analytics",
+    component: () => import("@/views/Analytics.vue"),
     meta: { requiresAuth: true },
   },
 

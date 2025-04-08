@@ -161,12 +161,16 @@ def extract_tool_names(agent_chunk):
     return tool_names
 
 
-def sanitize_title(title: str) -> str:
+def sanitize_text(title: str) -> str:
     """Remove or replace problematic characters in the title."""
     title = title.replace(":", " -")  # Replace ':' with ' -'
     # Remove problematic YAML characters
     title = re.sub(r'["\'|>#*]', '', title)
     return title.strip()
+
+
+def format_list(value):
+    return ', '.join(f'"{sanitize_text(v)}"' for v in value) if isinstance(value, list) else ''
 
 
 @error_handler
@@ -193,10 +197,20 @@ def publish_article(CONTENT_DIR, res: dict):
 
     try:
         with open(file_path, "w", encoding="utf-8") as f:
-            title = sanitize_title(article_data['title'])
             # Write the article content to the file.
-            front_matter = f"""\n---\ntitle: {title}\ndate: {datetime.now().strftime("%Y-%m-%d")}\nslug: {article_data['slug']}\n---\n""".strip(
-            )
+            front_matter = f"""+++
+title = "{sanitize_text(article_data['title'])}"
+subtitle = "{sanitize_text(article_data.get('subtitle', ''))}"
+slug = "{sanitize_text(article_data.get('slug', ''))}"
+date = "{datetime.now().isoformat()}"
+lastmod = "{datetime.now().isoformat()}"
+description = "{sanitize_text(article_data.get('description', ''))}"
+summary = "{sanitize_text(article_data['summary'])}"
+keywords = [{format_list(article_data.get('keywords', []))}]
+tags = [{format_list(article_data.get('tags', []))}]
+categories = [{format_list(article_data.get('categories', []))}]
++++
+""".strip()
 
             f.write(front_matter + "\n\n" + article_data['content'])
         print(f"Article published successfully at {file_path}")

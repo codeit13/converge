@@ -201,10 +201,15 @@ export default {
       ],
       navMain: [
         {
-          title: "Dashboard",
+          title: "Chat",
           url: "/",
-          icon: SquareTerminal,
+          icon: MessageSquareDiff,
           isActive: true,
+        },
+        {
+          title: "Analytics",
+          url: "/analytics",
+          icon: SquareTerminal,
           // items: [
           //   {
           //     title: "History",
@@ -219,30 +224,6 @@ export default {
           //     url: "/dashboard/settings",
           //   },
           // ],
-        },
-        {
-          title: "Workflows",
-          url: "/workflows",
-          icon: Bot,
-          // items: [
-          //   {
-          //     title: "Genesis",
-          //     url: "/models/genesis",
-          //   },
-          //   {
-          //     title: "Explorer",
-          //     url: "/models/explorer",
-          //   },
-          //   {
-          //     title: "Quantum",
-          //     url: "/models/quantum",
-          //   },
-          // ],
-        },
-        {
-          title: "Chat",
-          url: "/chat",
-          icon: MessageSquareDiff,
         },
       ],
     };

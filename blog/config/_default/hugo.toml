@@ -5,7 +5,7 @@ defaultContentLanguage = "en"
 # pluralizeListTitles = "true" # hugo function useful for non-english languages, find out more in  https://gohugo.io/getting-started/configuration/#pluralizelisttitles
 
 enableRobotsTXT = true
-summaryLength = 0
+summaryLength = 50
 hasCJKLanguage = true
 
 buildDrafts = false
@@ -23,6 +23,7 @@ googleAnalytics = "G-WVXW8DQXW5"
 
 [taxonomies]
   tag = "tags"
+  keyword = "keywords"
   category = "categories"
   author = "authors"
   series = "series"
@@ -64,3 +65,16 @@ googleAnalytics = "G-WVXW8DQXW5"
       name = 'fragmentrefs'
       type = 'fragments'
       weight = 10
+
+[services]
+  [services.disqus]
+    shortname = 'blogs.sleebit'
+
+[privacy]
+  [privacy.x]
+    disable = false
+    enableDNT = false
+    simple = false
+  [privacy.youTube]
+    disable = false
+    privacyEnhanced = false

@@ -33,6 +33,10 @@ class ArticleFormat(BaseModel):
         ...,
         description="Meta description for SEO (150-160 characters)"
     )
+    summary: str = Field(
+        ...,
+        description="Summarizes the content or serves as a teaser to encourage readers to visit the page"
+    )
     keywords: list[str] = Field(
         ...,
         description="Primary and secondary keywords for SEO optimization"
@@ -136,6 +140,7 @@ def generate_article(context: str, tool_call_id: Annotated[str, InjectedToolCall
             - Suggest appropriate diagrams or flowcharts that would enhance understanding
             - Provide textual descriptions of what these diagrams should illustrate
             - Include Mermaid or PlantUML markup for generating diagrams when appropriate
+            - It supports GoAT diagrams (ASCII) by using ```goat block 
 
             ## SEO Optimization Rules
             - Primary keyword in title, URL slug, first paragraph, and at least one H2
@@ -154,17 +159,29 @@ def generate_article(context: str, tool_call_id: Annotated[str, InjectedToolCall
             - Write in an authoritative but accessible voice
             - Include relevant statistics, research findings, or benchmark data
 
+            ## Short codes for various content options in markdown
+            - For Youtube video use {{{{< youtubeLite id="SgXhGb-7QbU" label="Blowfish-tools demo" params="controls=0&start=10&end=30&modestbranding=2&rel=0&enablejsapi=1"  >}}}}
+            - For displaying a tweet use {{{{< x user="SanDiegoZoo" id="1453110110599868418" >}}}}
+            - For displaying a badge use {{{{</* /badge */>}}}}
+            - For displaying a button use {{{{</* button href="#button" target="_self" */>}}}}
+            - For displaying a chart use {{{{< chart >}}}} type: 'bar', data: {{ labels: ['Tomato', 'Blueberry', 'Banana', 'Lime', 'Orange'], datasets: [{{ label: '# of votes', data: [12, 19, 3, 5, 3], }}] }} {{{{< /chart >}}}}   
+            - For importing code from other sources like github gist use {{{{</* codeimporter url="rawpublicaccessiblefileurl" type="toml" startLine="11" endLine="18" */>}}}}
+            - For using github link, use this github card {{{{</* github repo="nunocoracao/blowfish" */>}}}}
+            - For math expressions, use katex language like this example: {{{{< katex >}}}} \(f(a,b,c) = (a^2+b^2+c^2)^3\)
+            - For using mermaid diagrams use {{{{< mermaid >}} graph LR; A[Lemons]-->B[Lemonade]; B-->C[Profit] {{< /mermaid >}}}}
+
+
             ## Metadata
             Current Date: {datetime.now().strftime("%Y-%m-%d")}
             Current Time: {datetime.now().strftime("%H:%M:%S")}
             Target Audience: Technical professionals, AI enthusiasts, developers, data scientists
-            Content Type: Technical explanation, implementation guide, industry analysis, or emerging technology overview
+            Content Type: Technical explanation of a concept, implementation guide of a topic, industry analysis, or emerging technology overview
         """
          )
     ]
 
     llm = ChatOpenAI(
-        api_key=settings.OPENAI_API_KEY, model="gpt-4o-mini", temperature=0.5)
+        api_key=settings.OPENAI_API_KEY, model="gpt-4o-mini", temperature=0.7)
 
     llm = llm.with_structured_output(ArticleFormat)
 

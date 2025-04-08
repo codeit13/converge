@@ -17,16 +17,16 @@ COPY app/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set fixed Node.js version and install nvm, Node.js, and Yarn
-ENV NODE_VERSION=22.3.0
-ENV NVM_DIR=/root/.nvm
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash && \
-    . "$NVM_DIR/nvm.sh" && \
-    nvm install $NODE_VERSION && \
-    nvm use $NODE_VERSION && \
-    nvm alias default $NODE_VERSION && \
-    ln -sf "$NVM_DIR/versions/node/v$NODE_VERSION/bin/node" /usr/local/bin/node && \
-    ln -sf "$NVM_DIR/versions/node/v$NODE_VERSION/bin/npm" /usr/local/bin/npm && \
-    npm install -g yarn
+# ENV NODE_VERSION=22.3.0
+# ENV NVM_DIR=/root/.nvm
+# RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash && \
+#     . "$NVM_DIR/nvm.sh" && \
+#     nvm install $NODE_VERSION && \
+#     nvm use $NODE_VERSION && \
+#     nvm alias default $NODE_VERSION && \
+#     ln -sf "$NVM_DIR/versions/node/v$NODE_VERSION/bin/node" /usr/local/bin/node && \
+#     ln -sf "$NVM_DIR/versions/node/v$NODE_VERSION/bin/npm" /usr/local/bin/npm && \
+#     npm install -g yarn
 
 # Copy the entire project into the container
 COPY . .
