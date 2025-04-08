@@ -48,8 +48,13 @@ async def run_agent(request: Request, query: RunRequest):
 
 @router.post("/stream")
 async def stream_agent(request: Request, query: StreamRequest) -> StreamingResponse:
+    userid = request.headers.get("user_id")
+    if not userid:
+        raise HTTPException(status_code=400, detail="Missing user_id header")
+
     print(f"Stream endpoint called with prompt: {query.prompt}")
     agent_service: AgentService = request.app.state.agent_service
+    agent_service.set_user_id(userid)
 
     try:
         # Create a background task to save the history after streaming completes

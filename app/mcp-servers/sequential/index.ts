@@ -118,6 +118,7 @@ class SequentialThinkingServer {
             type: "text",
             text: JSON.stringify(
               {
+                thought: validatedInput?.thought,
                 thoughtNumber: validatedInput.thoughtNumber,
                 totalThoughts: validatedInput.totalThoughts,
                 nextThoughtNeeded: validatedInput.nextThoughtNeeded,

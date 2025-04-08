@@ -1,5 +1,10 @@
 <template>
-  <div class="h-[90vh] w-full flex flex-col overflow-hidden">
+  <div
+    class="h-[90vh] w-full flex flex-col overflow-hidden"
+    :style="{
+      fontFamily: `ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'`,
+    }"
+  >
     <Card
       class="flex-1 flex flex-col overflow-hidden shadow-lg border-none m-0 rounded-none bg-gradient-to-l from-background via-secondary/5 to-background"
     >
@@ -14,30 +19,26 @@
           <div class="flex items-center gap-2">
             <Bot class="h-5 w-5 md:h-6 md:w-6 text-primary" />
             <div>
-              <CardTitle class="font-display text-lg md:text-xl"
-                >Chat with AI</CardTitle
-              >
-              <CardDescription class="text-xs md:text-sm">
-                Ask questions or give instructions
-              </CardDescription>
+              <CardTitle class="font-display text-lg md:text-xl">
+                Chat with AI
+              </CardTitle>
             </div>
           </div>
-          <div class="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              class="text-xs md:text-sm"
-              @click="clearChat"
-            >
-              <RefreshCw class="h-3.5 w-3.5 mr-1" />
-              New Chat
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            class="text-xs md:text-sm"
+            @click="clearChat"
+          >
+            <RefreshCw class="h-3 w-3 mr-1" />
+            New Chat
+          </Button>
         </div>
       </CardHeader>
 
       <CardContent
-        class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar"
+        class="flex-1 overflow-y-auto px-0 py-6 md:p-6 space-y-6 custom-scrollbar"
+        id="chat-container"
         ref="chatContainer"
       >
         <!-- Welcome message -->
@@ -79,10 +80,10 @@
               initial: { opacity: 0, x: 20 },
               enter: { opacity: 1, x: 0, transition: { duration: 300 } },
             }"
-            class="flex items-start gap-2 ml-auto max-w-[85%] md:max-w-[75%] lg:max-w-[70%] px-1"
+            class="flex items-start gap-2 rounded-lg ml-auto max-w-[85%] md:max-w-[75%] lg:max-w-[70%] px-1"
           >
             <div class="rounded-2xl p-3 shadow-sm break-words w-full">
-              <p class="font-medium text-sm md:text-base">
+              <p class="font-medium text-sm md:text-base text-[#b3b3b3]">
                 {{ message.content }}
               </p>
             </div>
@@ -94,26 +95,6 @@
             </Avatar>
           </div>
 
-          <!-- Thinking indicator for tool calls and processing -->
-          <div
-            v-if="message.thinkingMessage"
-            class="animate-pulse thinking-indicator ml-10 md:ml-8 mb-2 max-w-[80%]"
-          >
-            <div class="thinking-indicator-icon">
-              <Lightbulb class="h-3.5 w-3.5" />
-            </div>
-            <div class="thinking-indicator-content">
-              <span class="text-xs md:text-sm">{{
-                message.thinkingMessage
-              }}</span>
-              <div class="typing-animation">
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-              </div>
-            </div>
-          </div>
-
           <!-- AI message -->
           <div
             v-else-if="message.role === 'assistant'"
@@ -121,7 +102,7 @@
               initial: { opacity: 0, x: -20 },
               enter: { opacity: 1, x: 0, transition: { duration: 300 } },
             }"
-            class="group flex items-start gap-2 max-w-[85%] md:max-w-[75%] lg:max-w-[70%] px-1"
+            class="flex items-start gap-2 max-w-[95%] md:max-w-[75%] lg:max-w-[70%] px-1"
           >
             <Avatar class="h-8 w-8 shrink-0">
               <AvatarImage src="" />
@@ -129,64 +110,206 @@
                 <Bot class="h-4 w-4" />
               </AvatarFallback>
             </Avatar>
-            <div
-              class="relative rounded-2xl bg-muted/50 p-3 shadow-sm break-words w-full"
-              :class="{
-                'animate-pulse':
-                  isLoading && message === messages[messages.length - 1],
-              }"
-            >
+            <div class="flex flex-col w-full space-y-3">
+              <!-- Thinking section - collapsible -->
               <div
-                v-if="message.content"
-                v-html="formatMessage(message)"
-                class="prose prose-sm max-w-none dark:prose-invert"
-              ></div>
-              <div v-else class="flex items-center space-x-2">
-                <div class="animate-pulse font-medium">Thinking</div>
-                <div class="flex space-x-1">
-                  <span
-                    class="animate-bounce delay-0 h-1.5 w-1.5 rounded-full bg-muted-foreground"
-                  ></span>
-                  <span
-                    class="animate-bounce delay-150 h-1.5 w-1.5 rounded-full bg-muted-foreground"
-                  ></span>
-                  <span
-                    class="animate-bounce delay-300 h-1.5 w-1.5 rounded-full bg-muted-foreground"
-                  ></span>
+                v-if="message.thinking && message.thinking.length > 0"
+                class="w-full"
+              >
+                <div
+                  class="flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors rounded-lg hover:bg-secondary/5"
+                  @click="toggleThinking(message)"
+                >
+                  <span class="text-normal font-medium text-muted-foreground">
+                    {{
+                      message?.thinkingTime
+                        ? "Thought for"
+                        : "Reasoning & Tools"
+                    }}
+                    <span
+                      v-if="message.thinkingTime"
+                      class="ml-2 text-xs text-muted-foreground/70"
+                    >
+                      ({{ formatTime(message.thinkingTime) }})
+                    </span>
+                  </span>
+                  <ChevronDown
+                    class="h-3.5 w-3.5 ml-auto transition-transform text-muted-foreground"
+                    :class="{ 'rotate-180': message.showThinking }"
+                  />
+                </div>
+                <div
+                  class="relative rounded-lg px-3 py-0 mt-2 text-sm bg-background/5 transition-all duration-2000 h-full overflow-hidden"
+                  :class="{
+                    'h-0 overflow-hidden': !message.showThinking,
+                  }"
+                >
+                  <div
+                    class="bg-primary/10 absolute top-1 left-0 w-1 h-full rounded-full"
+                  ></div>
+                  <div
+                    v-for="(step, i) in message.thinking"
+                    :key="`thinking-${i}`"
+                    class="mb-1 ml-2"
+                  >
+                    <div class="flex items-center gap-2">
+                      <!-- <div class="rounded-full p-1 bg-primary/5">
+                        <Lightbulb class="h-3 w-3 text-muted-foreground" />
+                      </div> -->
+                      <div class="font-medium text-sm break-words">
+                        <span v-if="step.type === 'thinking'">
+                          {{ step.data }}
+                        </span>
+                        <span
+                          v-else-if="step.type === 'tool_calls'"
+                          class="text-secondary"
+                        >
+                          Calling
+
+                          {{
+                            step.data
+                              .map((tool) =>
+                                tool
+                                  .replace(/_/g, " ")
+                                  .replace(/(^|\s)\S/g, (l) => l.toUpperCase())
+                              )
+                              .join(", ")
+                          }}
+                          {{
+                            (step?.data || []).length == 1 ? "tool " : "tools: "
+                          }}
+                        </span>
+
+                        <div
+                          v-else-if="step.type === 'tool_messages'"
+                          class="text-sm font-medium text-muted-foreground break-words text-wrap"
+                        >
+                          <span v-html="step.data"></span>
+                        </div>
+
+                        <!-- Format JSON content nicely -->
+                        <div
+                          v-if="
+                            step.data &&
+                            typeof step.data === 'object' &&
+                            !['tool_calls', 'tool_messages'].includes(step.type)
+                          "
+                          class="space-y-2 px-4 py-2 mb-2 border border-muted/50 rounded-md"
+                        >
+                          <div
+                            v-for="(value, key) in step.data"
+                            :key="key"
+                            class="flex items-start gap-2"
+                          >
+                            <span
+                              class="font-medium text-sm text-muted-foreground capitalize"
+                            >
+                              {{
+                                typeof key === "number"
+                                  ? key + 1
+                                  : Number.isNaN(parseInt(key))
+                                  ? key
+                                  : parseInt(key) + 1
+                              }}:
+                            </span>
+                            <div class="flex-1">
+                              <!-- Handle different types of values -->
+                              <div
+                                v-if="
+                                  typeof value === 'object' && value !== null
+                                "
+                              >
+                                <ul class="list-disc list-inside space-y-1">
+                                  <li
+                                    v-for="(item, idx) in Array.isArray(value)
+                                      ? value
+                                      : Object.values(value)"
+                                    :key="idx"
+                                    class="text-sm text-muted-foreground"
+                                  >
+                                    {{ item }}
+                                  </li>
+                                </ul>
+                              </div>
+                              <div v-else class="text-sm text-muted-foreground">
+                                {{ value }}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <!-- Message actions on hover -->
+              <!-- Message content -->
               <div
-                class="absolute -top-3 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-1 bg-background rounded-md shadow-sm border p-1"
+                class="group relative rounded-lg px-2 py-1 md:py-2 md:px-4 break-words w-full backdrop-blur-sm"
+                :class="{
+                  'bg-secondary/0': message.role === 'assistant',
+                  'bg-secondary': message.role === 'user',
+                }"
               >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  @click="copyToClipboard(message.content)"
-                  class="h-7 w-7"
-                  title="Copy message"
+                <div
+                  v-if="message.content"
+                  v-html="formatMessage(message)"
+                  class="prose prose-sm max-w-none dark:prose-invert text-[#b3b3b3] tracking-wide"
+                ></div>
+                <div
+                  v-else
+                  class="animate-bounce flex items-center space-x-2 pt-2 pb-3 md:pt-0"
                 >
-                  <Copy class="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  @click="regenerateResponse(message)"
-                  class="h-7 w-7"
-                  title="Regenerate response"
+                  <span
+                    class="font-medium tracking-wide text-sm text-muted-foreground"
+                  >
+                    Thinking
+                  </span>
+                  <div class="flex space-x-1">
+                    <span
+                      class="animate-bounce delay-150 h-1.5 w-1.5 rounded-full bg-muted-foreground/70"
+                    ></span>
+                    <span
+                      class="animate-bounce delay-300 h-1.5 w-1.5 rounded-full bg-muted-foreground/70"
+                    ></span>
+                    <span
+                      class="animate-bounce delay-500 h-1.5 w-1.5 rounded-full bg-muted-foreground/70"
+                    ></span>
+                  </div>
+                </div>
+
+                <!-- Message actions -->
+                <div
+                  class="absolute -top-2 right-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200 flex space-x-1 bg-background/70 backdrop-blur-sm rounded-md shadow-sm border border-muted/10 p-0.5"
                 >
-                  <RefreshCw class="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  @click="saveToNotes(message)"
-                  class="h-7 w-7"
-                  title="Save to notes"
-                >
-                  <Save class="h-3.5 w-3.5" />
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    @click="copyToClipboard(message.content)"
+                    class="h-6 w-6"
+                    title="Copy message"
+                  >
+                    <Copy class="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    @click="regenerateResponse(message)"
+                    class="h-6 w-6"
+                    title="Regenerate response"
+                  >
+                    <RefreshCw class="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    @click="saveToNotes(message)"
+                    class="h-6 w-6"
+                    title="Save to notes"
+                  >
+                    <Save class="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -210,9 +333,10 @@
       </CardContent>
 
       <!-- Input area -->
-      <div class="p-4 md:p-5 lg:p-6 border-t">
+      <div class="p-2 md:p-5 lg:p-6">
         <!-- Response type toggle and options -->
-        <div class="flex items-center justify-between mb-3 px-1">
+        <!--<div class="flex items-center justify-between mb-3 px-1">
+          
           <div class="flex items-center gap-2">
             <Button
               variant="outline"
@@ -223,11 +347,8 @@
               <RefreshCw class="h-3 w-3 mr-1" />
               New Chat
             </Button>
-            <Button variant="outline" size="sm" class="text-xs h-7 px-2">
-              <Copy class="h-3 w-3 mr-1" />
-              Copy
-            </Button>
           </div>
+          
           <div class="flex items-center space-x-2">
             <span class="text-xs text-muted-foreground">Regular</span>
             <button
@@ -243,7 +364,7 @@
             </button>
             <span class="text-xs text-muted-foreground">Streaming</span>
           </div>
-        </div>
+        </div> -->
 
         <form @submit.prevent="sendMessage" class="flex space-x-2 md:space-x-3">
           <div class="relative flex-1 items-center justify-center">
@@ -253,7 +374,6 @@
               placeholder="Type your message..."
               class="min-h-10 md:min-h-12 pr-10 rounded-xl border-muted-foreground/20 focus:border-primary focus:ring-primary shadow-sm font-medium text-sm md:text-base"
               @keydown.enter.prevent="handleEnterKey"
-              @input="adjustTextareaHeight"
               ref="messageInput"
             />
             <Button
@@ -281,14 +401,11 @@
         </form>
       </div>
     </Card>
-
-    <!-- Toast notifications are handled by global store -->
   </div>
 </template>
 
-<!-- Component imports using script setup -->
-<script setup>
-// Component imports only
+<script>
+// Component imports
 import {
   Card,
   CardContent,
@@ -297,10 +414,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Input from "@/components/ui/input/Input.vue";
 import {
   Bot,
+  ChevronDown,
   Copy,
   Lightbulb,
   RefreshCw,
@@ -309,34 +427,48 @@ import {
   User,
   X,
 } from "lucide-vue-next";
-</script>
-
-<script>
-import { mapState } from "vuex";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
-import { useMotion } from "@vueuse/motion";
-import Input from "@/components/ui/input/Input.vue";
 
 export default {
-  // 3. Props definition
-  props: {},
-
-  // 4. Component data
+  name: "Chat",
+  components: {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+    Button,
+    Avatar,
+    AvatarFallback,
+    AvatarImage,
+    Input,
+    Bot,
+    ChevronDown,
+    Copy,
+    Lightbulb,
+    RefreshCw,
+    Save,
+    Send,
+    User,
+    X,
+  },
   data() {
     return {
       userInput: "",
-      messages: [],
+      messages: [
+        {
+          role: "system",
+          content: "Conversation started",
+        },
+      ],
       isLoading: false,
       lastUserMessage: "",
-      useStreaming: true, // Default to streaming responses
+      useStreaming: true,
     };
   },
-
-  // 5. Computed properties
   computed: {
     latestAiMessage() {
-      // Find the most recent AI message
       for (let i = this.messages.length - 1; i >= 0; i--) {
         if (this.messages[i].role === "assistant" && this.messages[i].content) {
           return this.messages[i];
@@ -345,65 +477,42 @@ export default {
       return null;
     },
   },
-
-  // 6. Watchers
   watch: {
     messages: {
       deep: true,
       handler() {
-        console.log("Messages changed:", this.messages);
-        this.$nextTick(() => {
-          this.scrollToBottom();
-        });
+        this.scrollToBottom();
       },
     },
   },
-
-  // 7. Lifecycle hooks
-  created() {
-    // Add a welcome system message
-    this.messages.push({
-      role: "system",
-      content: "Conversation started",
-    });
-  },
-
   mounted() {
     this.$store.commit("SET_SIDEBAR_OPEN", false);
-
-    // Focus the input field when component is mounted
-    this.$nextTick(() => {
-      if (
-        this.$refs.messageInput &&
-        typeof this.$refs.messageInput.focus === "function"
-      ) {
-        this.$refs.messageInput.focus();
+    const inputComponent = this.$refs.messageInput;
+    if (inputComponent && inputComponent.$el) {
+      const inputElement = inputComponent.$el.querySelector("input");
+      if (inputElement) {
+        inputElement.focus();
       }
-    });
+    }
   },
-
   unmounted() {
-    // No cleanup needed
     this.$store.commit("SET_SIDEBAR_OPEN", true);
   },
-
-  // 8. Methods
   methods: {
+    openLink(link) {
+      window.open(link, "_blank");
+    },
     clearChat() {
-      this.messages = [];
+      this.messages = [
+        {
+          role: "system",
+          content: "Conversation started",
+        },
+      ];
       this.userInput = "";
       this.isLoading = false;
-      this.streamingResponse = "";
-
-      // Add a welcome system message
-      this.messages.push({
-        role: "system",
-        content: "Conversation started",
-      });
     },
-
     copyConversation() {
-      // Format the conversation for copying
       const formattedConversation = this.messages
         .filter((message) => message.role !== "system")
         .map((message) => {
@@ -412,304 +521,230 @@ export default {
         })
         .join("\n\n");
 
-      // Use existing copyToClipboard method
       this.copyToClipboard(formattedConversation);
     },
+    toggleThinking(message) {
+      if (message.thinking && message.thinking.length > 0) {
+        message.showThinking = !message.showThinking;
+      }
+    },
     async sendMessage() {
-      const userMessage = this.userInput.trim();
-      if (!userMessage || this.isLoading) return;
+      const messageText = this.userInput.trim();
+      if (!messageText || this.isLoading) return;
 
-      // Add user message to chat
+      // Add user message
       this.messages.push({
         role: "user",
-        content: userMessage,
+        content: messageText,
       });
 
-      // Scroll to bottom immediately after adding user message
+      // Scroll to bottom immediately
       this.scrollToBottom();
 
       // Clear input and save last message
-      this.lastUserMessage = userMessage;
+      this.lastUserMessage = messageText;
       this.userInput = "";
-      this.adjustTextareaHeight();
 
       // Add placeholder for AI response
-      this.messages.push({
+      const aiMessage = {
         role: "assistant",
         content: "",
-        thinkingMessage: null,
-      });
+        thinking: [],
+        showThinking: true, // Start with thinking expanded
+        thinkingStartTime: Date.now(), // Start tracking time
+      };
+      this.messages.push(aiMessage);
 
       // Set loading state
       this.isLoading = true;
-
-      // Get the index of the AI message we'll be updating
       const aiMessageIndex = this.messages.length - 1;
 
       if (this.useStreaming) {
         // Use streaming API
         let fullResponse = "";
-        let currentThinking = "";
 
-        // Start the streaming connection
         const stream = this.$store.dispatch("streamAgent", {
-          userPrompt: userMessage,
+          userPrompt: messageText,
           onMessage: (data) => {
-            // Handle raw chunks from the backend
-            if (data.type === "chunk" && data.data) {
-              const chunk = data.data;
+            console.log("Stream data:", data);
+            // Process each stream message based on type
 
-              // Process based on chunk content
-              if (
-                chunk.agent &&
-                chunk.agent.messages &&
-                chunk.agent.messages.length > 0
-              ) {
-                // Extract the actual message content from the agent response
-                const message = chunk.agent.messages[0];
-                if (message.content) {
-                  // This is the final answer
-                  fullResponse = message.content;
-                  this.messages[aiMessageIndex].content = fullResponse;
-                  this.scrollToBottom();
-                }
-              } else if (chunk.output) {
-                // Direct output from the agent
-                fullResponse = chunk.output;
-                this.messages[aiMessageIndex].content = fullResponse;
-                this.scrollToBottom();
-              } else if (chunk.actions && chunk.actions.length > 0) {
-                // Agent is thinking or taking an action
-                const action = chunk.actions[0];
-                const toolName = action.tool || "unknown tool";
-                const toolInput = action.tool_input || "unknown input";
+            if (data.type === "thinking") {
+              // Add thinking step
+              this.messages[aiMessageIndex].thinking.push({
+                type: "thinking",
+                data: data.data,
+              });
+              this.scrollToBottom();
+            } else if (data.type == "tool_calls") {
+              const tools = data?.data || [];
 
-                currentThinking = `Using ${toolName} with input: ${toolInput}`;
-                this.messages[aiMessageIndex].content =
-                  fullResponse +
-                  (fullResponse ? "\n\n" : "") +
-                  "*" +
-                  currentThinking +
-                  "*";
-                this.scrollToBottom();
-              } else if (chunk.steps && chunk.steps.length > 0) {
-                // Results from tool execution
-                for (const step of chunk.steps) {
-                  if (step.observation) {
-                    const observation = step.observation.toString();
-                    currentThinking += "\n→ " + observation;
-                    this.messages[aiMessageIndex].content =
-                      fullResponse +
-                      (fullResponse ? "\n\n" : "") +
-                      "*" +
-                      currentThinking +
-                      "*";
-                    this.scrollToBottom();
+              this.messages[aiMessageIndex].thinking.push({
+                type: "tool_calls",
+                data: tools,
+              });
+              this.scrollToBottom();
+            } else if (data.type == "tool_messages") {
+              const message =
+                data?.data?.messages[data?.data?.messages.length - 1];
+
+              if (message) {
+                let messageContent = message?.content;
+                try {
+                  if (typeof messageContent == "object") {
+                    messageContent = JSON.stringify(messageContent, null, 2);
+                  } else {
+                    messageContent = JSON.parse(messageContent);
+                    messageContent = JSON.stringify(messageContent, null, 2);
                   }
+                } catch (e) {
+                  console.log(e);
                 }
+                this.messages[aiMessageIndex].thinking.push({
+                  type: "tool_messages",
+                  data: messageContent,
+                });
               }
-            } else if (data.type === "thinking") {
-              // Handle thinking message from the backend
-              // Instead of adding to content, set the thinkingMessage property
-              this.messages[aiMessageIndex].thinkingMessage = data.content;
               this.scrollToBottom();
-            } else if (data.type === "observation") {
-              // Legacy observation message format
-              currentThinking += "\n→ " + data.content;
-              this.messages[aiMessageIndex].content =
-                fullResponse +
-                (fullResponse ? "\n\n" : "") +
-                "*" +
-                currentThinking +
-                "*";
+            } else if (data.type === "chunk" && data.data && data.data != "") {
+              let chunk = data.data;
+
+              console.log("chunk: ", chunk);
+              try {
+                chunk = JSON.parse(chunk);
+              } catch (e) {
+                console.log(
+                  "Seems like chunk is already a valid string, processing it"
+                );
+              }
+
+              // Handle direct message chunks
+              if (typeof chunk == "object" && chunk.message_to_user) {
+                fullResponse = chunk.message_to_user;
+                this.messages[aiMessageIndex].content = fullResponse;
+              } else {
+                fullResponse = chunk;
+                this.messages[aiMessageIndex].content = chunk;
+              }
+
               this.scrollToBottom();
-            } else if (data.type === "answer") {
-              // Legacy answer message format
-              fullResponse = data.content;
-              this.messages[aiMessageIndex].content = fullResponse;
+            } else if (data.type == "complete") {
+              const article = data?.data?.article;
+              if (article && article?.link) {
+                this.messages[aiMessageIndex].content +=
+                  "\n\n\n Article is now live at [" + article.link + "](Link)";
+              }
+            } else if (data.type == "error") {
+              this.messages[
+                aiMessageIndex
+              ].content = `Seems like our servers are taking a coffee break. Please try again after the break :)\n\n${data.data}`;
+
+              this.isLoading = false;
               this.scrollToBottom();
-            } else if (data.type === "error") {
-              // Error message from the backend
-              this.messages[aiMessageIndex].content = "Error: " + data.content;
-              this.scrollToBottom();
-            } else if (data.type === "info") {
-              // Info message - don't update UI
             }
           },
           onError: (error) => {
             console.error("Streaming error:", error);
-            // Update with error message if the stream fails
-            this.messages[aiMessageIndex].content =
-              "Sorry, I encountered an error while processing your request.";
-
-            // Add system message about the error
-            this.messages.push({
-              role: "system",
-              content:
-                "An error occurred with the streaming connection. Please try again.",
-            });
+            this.messages[
+              aiMessageIndex
+            ].content = `Seems like our servers are taking a coffee break. Please try again after the break :)\n\n${error}`;
             this.isLoading = false;
+            this.scrollToBottom();
           },
           onComplete: () => {
-            // Streaming completed
             this.isLoading = false;
-
-            // Clear any thinking messages when streaming is complete
             if (this.messages[aiMessageIndex]) {
-              this.messages[aiMessageIndex].thinkingMessage = null;
+              // Calculate thinking time
+              const endTime = Date.now();
+              const thinkingTime = Math.round(
+                (endTime - aiMessage.thinkingStartTime) / 1000
+              );
+              this.messages[aiMessageIndex].thinkingTime = thinkingTime;
+
+              // Auto collapse thinking when complete
+              setTimeout(() => {
+                if (this.messages[aiMessageIndex]) {
+                  this.messages[aiMessageIndex].showThinking = false;
+                }
+              }, 1000);
             }
+            this.scrollToBottom();
           },
         });
 
-        // Set up a timeout to close the stream if it takes too long
-        setTimeout(() => {
-          if (this.isLoading) {
-            stream.close();
-            this.isLoading = false;
-          }
-        }, 60000); // 1 minute timeout
+        // Set timeout for stream
+        // setTimeout(() => {
+        //   if (this.isLoading) {
+        //     stream.close();
+        //     this.isLoading = false;
+        //   }
+        // }, 60000);
       } else {
         // Use regular API
         try {
-          // Call the runAgent action from Vuex store
-          const response = await this.$store.dispatch("runAgent", userMessage);
-
-          // Update the AI message with the response
+          const response = await this.$store.dispatch("runAgent", messageText);
           this.messages[aiMessageIndex].content =
             response.data?.response || "I processed your request.";
         } catch (error) {
           console.error("Error running agent:", error);
-
-          // Update with error message
           this.messages[aiMessageIndex].content =
             "Sorry, I encountered an error processing your request.";
-
-          // Add system message about the error
           this.messages.push({
             role: "system",
             content: "An error occurred. Please try again.",
           });
         } finally {
           this.isLoading = false;
+          this.scrollToBottom();
         }
       }
     },
-
     handleEnterKey(e) {
-      // Send message on Enter, but allow Shift+Enter for new lines
       if (!e.shiftKey && this.userInput.trim()) {
         this.sendMessage();
       } else if (e.shiftKey) {
-        // Allow default behavior for Shift+Enter (new line)
-        const textarea = this.$refs.messageInput;
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
+        // Allow Shift+Enter for new line
+        const input = this.$refs.messageInput.$el.querySelector("input");
+
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
         this.userInput =
           this.userInput.substring(0, start) +
           "\n" +
           this.userInput.substring(end);
-        this.$nextTick(() => {
-          textarea.selectionStart = textarea.selectionEnd = start + 1;
-          this.adjustTextareaHeight();
-        });
+        input.selectionStart = input.selectionEnd = start + 1;
       }
     },
-
-    adjustTextareaHeight() {
-      this.$nextTick(() => {
-        const textarea = this.$refs.messageInput;
-        if (!textarea || !textarea.style) return;
-
-        try {
-          // Reset height to calculate properly
-          textarea.style.height = "auto";
-
-          // Set new height based on scrollHeight, with a max height
-          const newHeight = Math.min(textarea.scrollHeight, 150);
-          textarea.style.height = `${newHeight}px`;
-
-          // Adjust rows for the component
-          this.textareaRows = Math.max(
-            1,
-            Math.min(5, Math.floor(newHeight / 24))
-          );
-        } catch (error) {
-          console.error("Error adjusting textarea height:", error);
-        }
-      });
-    },
-
     scrollToBottom() {
-      this.$nextTick(() => {
-        const container = this.$refs.chatContainer;
-        if (container) {
-          // Use standard scrollTop property which is widely supported
-          container.scrollTop = container.scrollHeight;
+      const container = document.getElementById("chat-container");
+      if (container) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth",
+        });
 
-          // Add a second scroll check after a short delay to handle any rendering delays
-          setTimeout(() => {
-            if (
-              container.scrollTop + container.clientHeight <
-              container.scrollHeight
-            ) {
-              container.scrollTop = container.scrollHeight;
-            }
-          }, 100);
-        }
-      });
+        setTimeout(() => {
+          container.scrollTo({
+            top: container.scrollHeight,
+            behavior: "smooth",
+          });
+        }, 100);
+      }
     },
-
     formatMessage(message) {
       let content = message?.content ?? "";
       if (!content) return "";
 
-      // Check if content is valid JSON and contains articleSlug.
-      let JSONContent = false;
-      try {
-        JSONContent = JSON.parse(content);
-      } catch (e) {
-        // Not JSON, so continue as markdown.
-      }
-
-      if (JSONContent && JSONContent.articleSlug) {
-        const baseUrl = window.location.href.includes("localhost")
-          ? "http://localhost:1313"
-          : "https://blog.sleebit.com";
-        // Use the provided title if available; otherwise, fall back to the URL text.
-        const linkText =
-          JSONContent.title || `${baseUrl}/posts/${JSONContent.articleSlug}`;
-        content = `Your article is published at <a href="${baseUrl}/posts/${JSONContent.articleSlug}" target="_blank" rel="nofollow noopener noreferrer">${linkText}</a>`;
-      }
-
-      // Create a custom renderer for marked.
-      // const renderer = new marked.Renderer();
-      const renderer = {
-        link({ href, title, text, tokens }) {
-          // Check if link is external.
-          const isExternal = !href.startsWith(
-            `${location.protocol}//${location.host}`
-          );
-          // Use this.parser.parseInline to render any inline markdown within the link text.
-          const renderedText = tokens ? marked.parseInline(tokens) : text;
-          if (isExternal) {
-            return `<a href="${href}" title="${
-              title || ""
-            }" target="_blank" rel="nofollow noopener noreferrer">${renderedText}</a>`;
-          }
-          return `<a href="${href}" title="${title || ""}">${renderedText}</a>`;
-        },
-      };
-
-      marked.use({ renderer });
-
-      // Parse the markdown content with the custom renderer.
       const html = marked.parse(content);
       return DOMPurify.sanitize(html);
     },
-
+    formatTime(seconds) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes}min ${remainingSeconds}s`;
+    },
     copyToClipboard(text) {
       if (!text) return;
-
       navigator.clipboard
         .writeText(text)
         .then(() => {
@@ -720,7 +755,7 @@ export default {
           });
         })
         .catch((err) => {
-          console.error("Failed to copy text: ", err);
+          console.error("Failed to copy text:", err);
           this.$store.commit("SET_TOASTER_DATA", {
             message: "Failed to copy text",
             type: "error",
@@ -728,20 +763,19 @@ export default {
           });
         });
     },
-
     regenerateResponse(message) {
       if (this.isLoading) return;
 
-      // If a specific message is provided, use its index
+      // If specific message provided
       if (message) {
         const index = this.messages.indexOf(message);
         if (index !== -1 && index > 0) {
-          // Find the preceding user message
+          // Find preceding user message
           for (let i = index - 1; i >= 0; i--) {
             if (this.messages[i].role === "user") {
-              // Remove the AI message
+              // Remove AI message
               this.messages.splice(index, 1);
-              // Set user input to the found user message
+              // Set user input and resend
               this.userInput = this.messages[i].content;
               this.sendMessage();
               return;
@@ -750,43 +784,35 @@ export default {
         }
       }
 
-      // Fallback to using the last user message
+      // Fallback to last user message
       if (this.lastUserMessage) {
-        // Remove the last AI message
         if (this.latestAiMessage) {
           const index = this.messages.indexOf(this.latestAiMessage);
           if (index !== -1) {
             this.messages.splice(index, 1);
           }
         }
-
-        // Set user input to last message and send again
         this.userInput = this.lastUserMessage;
         this.sendMessage();
       }
     },
-
     saveToNotes(message) {
-      const content = message?.content || this.latestAiMessage?.content;
+      const content =
+        (message && message.content) ||
+        (this.latestAiMessage && this.latestAiMessage.content);
       if (!content) return;
 
-      // Show confirmation toast
       this.$store.commit("SET_TOASTER_DATA", {
         message: "Response saved to notes",
         type: "success",
         show: true,
       });
 
-      // Here you would implement the actual save functionality
-      // For example, dispatch a Vuex action to save to notes
-      // this.$store.dispatch('saveToNotes', content);
+      // Actual save functionality would be implemented here
+      // e.g.: this.$store.dispatch('saveToNotes', content);
     },
-
-    // Toggle between streaming and regular responses
     toggleResponseType() {
       this.useStreaming = !this.useStreaming;
-
-      // Show a toast notification to confirm the change
       this.$store.commit("SET_TOASTER_DATA", {
         type: "info",
         message: this.useStreaming
@@ -802,90 +828,8 @@ export default {
 </script>
 
 <style scoped>
-/* Thinking indicator for tool calls and processing */
-.thinking-indicator {
-  position: relative;
-  padding: 0.75rem 1rem;
-  border-radius: 1rem;
-  background-color: rgba(0, 0, 0, 0.05);
-  max-width: fit-content;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.thinking-indicator-content {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.thinking-indicator-icon {
-  opacity: 0.8;
-}
-
-/* Typing animation dots */
-.typing-animation {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.typing-dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  background-color: rgba(0, 0, 0, 0.3);
-  animation: typing-animation 1.4s infinite ease-in-out both;
-}
-
-.typing-dot:nth-child(1) {
-  animation-delay: 0s;
-}
-.typing-dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-.typing-dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes typing-animation {
-  0%,
-  80%,
-  100% {
-    transform: scale(0.6);
-    opacity: 0.6;
-  }
-  40% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-/* Animation delays for the bouncing dots */
-.delay-0 {
-  animation-delay: 0ms;
-}
-
-.delay-150 {
-  animation-delay: 150ms;
-}
-
-.delay-300 {
-  animation-delay: 300ms;
-}
-
-/* Custom scrollbar styling */
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
-}
-
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -893,114 +837,52 @@ export default {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(0, 0, 0, 0.1);
   border-radius: 10px;
-  border: none;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(0, 0, 0, 0.3);
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Dark mode scrollbar */
-:deep(.dark) .custom-scrollbar {
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+.typing-animation {
+  display: inline-flex;
+  align-items: center;
+  height: 1.5rem;
 }
 
-:deep(.dark) .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.2);
+.typing-dot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  margin: 0 1px;
+  background: currentColor;
+  animation: typingAnimation 1.4s infinite ease-in-out;
+  opacity: 0.6;
 }
 
-:deep(.dark) .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.3);
+.typing-dot:nth-child(1) {
+  animation-delay: 0s;
 }
 
-/* Font styles */
-:deep(.font-display) {
-  font-family: "Inter", system-ui, sans-serif;
-  letter-spacing: -0.025em;
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
 }
 
-/* Style for code blocks in messages */
-:deep(pre) {
-  background-color: hsl(var(--code));
-  border-radius: 0.75rem;
-  padding: 1rem;
-  margin: 1rem 0;
-  overflow-x: auto;
-  position: relative;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
 }
 
-:deep(pre code) {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-:deep(p) {
-  margin-bottom: 0.75rem;
-  line-height: 1.6;
-}
-
-:deep(p:last-child) {
-  margin-bottom: 0;
-}
-
-:deep(h1),
-:deep(h2),
-:deep(h3),
-:deep(h4) {
-  font-weight: 600;
-  margin-top: 1.5rem;
-  margin-bottom: 0.75rem;
-}
-
-:deep(ul),
-:deep(ol) {
-  margin-left: 1.5rem;
-  margin-bottom: 0.75rem;
-}
-
-:deep(li) {
-  margin-bottom: 0.25rem;
-}
-
-:deep(a) {
-  color: hsl(var(--primary));
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-:deep(blockquote) {
-  border-left: 3px solid hsl(var(--primary));
-  padding-left: 1rem;
-  color: hsl(var(--muted-foreground));
-  font-style: italic;
-  margin: 1rem 0;
-}
-
-:deep(hr) {
-  border: none;
-  border-top: 1px solid hsl(var(--border));
-  margin: 1.5rem 0;
-}
-
-:deep(table) {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 1rem 0;
-}
-
-:deep(th),
-:deep(td) {
-  border: 1px solid hsl(var(--border));
-  padding: 0.5rem;
-  text-align: left;
-}
-
-:deep(th) {
-  background-color: hsl(var(--muted));
-  font-weight: 600;
+@keyframes typingAnimation {
+  0%,
+  100% {
+    transform: scale(0.7);
+    opacity: 0.2;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
 }
 </style>

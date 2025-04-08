@@ -165,6 +165,7 @@ export default {
 
     navigateToRoute(url) {
       this.$router.push(url);
+      this.$store.commit("SET_SIDEBAR_OPEN", false);
     },
 
     handleMainClick(item) {

@@ -7,7 +7,7 @@ export const BACKEND_URL = isLocalhost
   : "https://converge-backend.sleebit.com";
 
 export const PAYMENTS_AUTH_URL = isLocalhost
-  ? "http://localhost:3000/v1"
+  ? "https://payments.sleebit.com/v1"
   : "https://payments.sleebit.com/v1";
 
 export const PROJECT_ID = isLocalhost

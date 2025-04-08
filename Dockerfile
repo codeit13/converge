@@ -9,7 +9,7 @@ ENV PYTHONPATH=/app/app
 
 # Install required system packages
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl wget ffmpeg && \
+    apt-get install -y --no-install-recommends curl wget ffmpeg yt-dlp && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy and install Python dependencies from the app directory
@@ -41,4 +41,4 @@ EXPOSE 8001
 WORKDIR /app/app
 
 # Start the FastAPI application using uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["python", "app.py"]

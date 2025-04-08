@@ -76,7 +76,12 @@ router.beforeEach(async (to, from, next) => {
     next({ path: "/auth/login", query: { redirect: to.fullPath } });
   } else if (isAuthRoute && isAuthenticated) {
     // Redirect to home if user is already authenticated and tries to access auth routes
-    next({ path: "/" });
+    const redirectPath = store.state.auth.user?.redirectPath;
+    if (redirectPath) {
+      next({ path: redirectPath });
+    } else {
+      next({ path: "/" });
+    }
   } else {
     next();
   }

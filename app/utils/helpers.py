@@ -170,7 +170,7 @@ def sanitize_title(title: str) -> str:
 
 
 @error_handler
-async def publish_article(CONTENT_DIR, article_data: dict):
+def publish_article(CONTENT_DIR, res: dict):
     """
     Publish the article extracted from the agent output.
     This method writes the article to a Markdown file in the content directory.
@@ -179,8 +179,12 @@ async def publish_article(CONTENT_DIR, article_data: dict):
     if not os.path.exists(CONTENT_DIR):
         os.makedirs(CONTENT_DIR)
 
+    article_data = res
+    if not article_data:
+        return None
+
     # Ensure the 'Posts' directory exists
-    article_folder_dir_name = article_data['articleSlug'].lower()
+    article_folder_dir_name = article_data['slug'].lower()
     posts_dir = os.path.join(CONTENT_DIR, 'Posts', article_folder_dir_name)
     if not os.path.exists(posts_dir):
         os.makedirs(posts_dir)
@@ -191,12 +195,12 @@ async def publish_article(CONTENT_DIR, article_data: dict):
         with open(file_path, "w", encoding="utf-8") as f:
             title = sanitize_title(article_data['title'])
             # Write the article content to the file.
-            front_matter = f"""\n---\ntitle: {title}\ndate: {datetime.now().strftime("%Y-%m-%d")}\nslug: {article_data['articleSlug']}\n---\n""".strip(
+            front_matter = f"""\n---\ntitle: {title}\ndate: {datetime.now().strftime("%Y-%m-%d")}\nslug: {article_data['slug']}\n---\n""".strip(
             )
 
-            f.write(front_matter + "\n\n" + article_data['article'])
+            f.write(front_matter + "\n\n" + article_data['content'])
         print(f"Article published successfully at {file_path}")
-        return article_data['articleSlug'].lower()
+        return f"http://localhost:1313/posts/{article_data['slug'].lower()}"
     except Exception as e:
         print(f"Error publishing article: {e}")
         return None

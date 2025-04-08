@@ -8,10 +8,10 @@ title = "Sleebit Blogs"
   isoCode = "en"
   rtl = false
   dateFormat = "2 January 2006"
-  # logo = "img/logo.png"
-  # secondaryLogo = "img/secondary-logo.png"
-  description = "My Blog Website"
-  copyright = "Blogs at Sleebit © 2025"
+  logo = "img/logo.png"
+  #secondaryLogo = "img/secondary-logo.png"
+  description = "Sleebit Blogs"
+  copyright = "Sleebit Blogs © 2025"
 
 [params.author]
   name = "Sumit Chauhan"
