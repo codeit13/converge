@@ -631,8 +631,9 @@ export default {
             } else if (data.type == "complete") {
               const article = data?.data?.article;
               if (article && article?.link) {
-                this.messages[aiMessageIndex].content +=
-                  "\n\n\n Article is now live at [" + article.link + "](Link)";
+                this.messages[
+                  aiMessageIndex
+                ].content += `\n\n\n Article is now live at ${article.link}`;
               }
             } else if (data.type == "error") {
               this.messages[
