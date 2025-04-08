@@ -37,7 +37,7 @@
       </CardHeader>
 
       <CardContent
-        class="flex-1 overflow-y-auto px-0 py-6 md:p-6 space-y-6 custom-scrollbar"
+        class="flex-1 overflow-y-auto px-0 py-6 md:p-6 mx-20 space-y-6 custom-scrollbar"
         id="chat-container"
         ref="chatContainer"
       >
@@ -83,7 +83,9 @@
             class="flex items-start gap-2 rounded-lg ml-auto max-w-[85%] md:max-w-[75%] lg:max-w-[70%] px-1"
           >
             <div class="rounded-2xl p-3 shadow-sm break-words w-full">
-              <p class="font-medium text-sm md:text-base text-[#b3b3b3]">
+              <p
+                class="prose prose-sm max-w-none dark:prose-invert text-[#b3b3b3] tracking-wide"
+              >
                 {{ message.content }}
               </p>
             </div>
@@ -128,7 +130,7 @@
                     }}
                     <span
                       v-if="message.thinkingTime"
-                      class="ml-2 text-xs text-muted-foreground/70"
+                      class="ml-0.5 text-xs text-muted-foreground/70"
                     >
                       ({{ formatTime(message.thinkingTime) }})
                     </span>
@@ -609,7 +611,6 @@ export default {
             } else if (data.type === "chunk" && data.data && data.data != "") {
               let chunk = data.data;
 
-              console.log("chunk: ", chunk);
               try {
                 chunk = JSON.parse(chunk);
               } catch (e) {

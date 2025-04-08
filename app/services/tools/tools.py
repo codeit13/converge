@@ -15,23 +15,35 @@ from config import settings
 class ArticleFormat(BaseModel):
     title: str = Field(
         ...,
-        description="Title of the generated article"
+        description="SEO-optimized title of the generated article (70-80 characters)"
+    )
+    subtitle: str = Field(
+        ...,
+        description="Optional subtitle that provides additional context"
     )
     content: str = Field(
         ...,
-        description="Markdown content of the generated article"
+        description="Complete markdown content of the generated article"
     )
     slug: str = Field(
         ...,
-        description="Slug of the generated article"
+        description="URL-friendly slug derived from the title"
+    )
+    description: str = Field(
+        ...,
+        description="Meta description for SEO (150-160 characters)"
     )
     keywords: list[str] = Field(
         ...,
-        description="Keywords of the generated article"
+        description="Primary and secondary keywords for SEO optimization"
     )
-    link: str = Field(
+    tags: list[str] = Field(
         ...,
-        description="Link of this published article"
+        description="Hugo taxonomies for article categorization"
+    )
+    categories: list[str] = Field(
+        ...,
+        description="Main categories for the article in Hugo"
     )
 
 
@@ -52,41 +64,101 @@ def generate_article(context: str, tool_call_id: Annotated[str, InjectedToolCall
             You are an expert technical writer specializing in AI content with strong SEO optimization. Your task is to create an authoritative, insightful blog article that ranks well on search engines while delivering genuine technical value to a knowledgeable audience.
 
             ## Article Structure Requirements
-            Create a markdown-formatted blog post with:
+            Create a well-structured markdown article with:
             1. A compelling, specific title that includes the primary keyword (70-80 characters)
-            2. A well-structured content hierarchy using proper heading tags (H2, H3, H4)
-            3. A URL-friendly slug derived from the title
+            2. An executive summary/introduction (150-200 words) that hooks the reader and outlines what they'll learn
+            3. A well-structured content hierarchy using proper heading tags (H2, H3, H4)
             4. Strategic keyword placement throughout the content
-            5. Total word count between 1500-2500 words for comprehensive coverage
+            5. A comprehensive table of contents for easy navigation
+            6. A strong conclusion with actionable takeaways
+            7. A related resources/further reading section
+            8. 5-7 relevant FAQs addressing common questions about the topic
+            9. Total word count between 1800-2500 words for comprehensive coverage
 
-            ## Content Quality Guidelines
+            ## Detailed Sectional Requirements
+            
+            ### Introduction Section
             - Begin with a technical hook that demonstrates expertise and establishes relevance
-            - Include code examples, mathematical formulas, or technical diagrams where appropriate
-            - Break down complex AI concepts into digestible explanations without oversimplification
-            - Support claims with referenced research papers, technical documentation, or industry benchmarks
-            - Incorporate practical applications and real-world implications of the technology
-            - Address potential limitations, ethical considerations, or technical challenges
-            - End with forward-looking insights and actionable takeaways
+            - Clearly state the problem or challenge the article addresses
+            - Include a brief overview of what readers will learn
+            - End with a transition to the main content
+            
+            ### Main Content Sections
+            - Organize content into logical H2 sections with descriptive headings
+            - Further divide complex sections into H3 and H4 subsections
+            - Include prerequisites or background knowledge needed (if applicable)
+            - For implementation guides:
+              * Break down into clear, numbered steps
+              * Explain the purpose of each step
+              * Include code examples with comments
+              * Highlight potential issues or gotchas
+              * Provide verification steps to ensure correct implementation
+            
+            ### Practical Application Section
+            - Include real-world use cases and examples
+            - Discuss industry applications or business implications
+            - Provide benchmarks or performance expectations where relevant
+            
+            ### Limitations & Considerations Section
+            - Address technical limitations honestly
+            - Discuss ethical considerations or potential challenges
+            - Include alternative approaches where applicable
+            
+            ### Conclusion
+            - Summarize key points and insights
+            - Provide actionable next steps for readers
+            - End with a forward-looking statement about the technology
+            
+            ### FAQs Section
+            - Include 5-7 specific, detailed questions and answers
+            - Address common challenges, misconceptions, and advanced usage
+            - Incorporate additional keywords naturally in this section
+            
+            ### Further Reading Section
+            - Link to related resources, documentation, and research papers
+            - Suggest next topics to explore
 
-            ## Technical Formatting Elements
+            ## Technical Content Elements
             - Use markdown tables for comparative analyses
-            - Include properly formatted code blocks with syntax highlighting
+            - Include properly formatted code blocks with syntax highlighting (```language)
             - Create bulleted or numbered lists for step-by-step explanations
             - Emphasize key technical terms with bold or italic formatting
             - Add internal linking opportunities to related technical concepts
+            - Use math formulas with proper LaTeX notation when needed
+            - Include callouts for important notes, warnings, or tips
+            - Use Hugo shortcodes for enhanced dynamic content:
+              * {{< highlight python >}}code{{< /highlight >}}
+              * {{< figure src="/images/diagram.png" title="Diagram Title" >}}
+              * {{< notice note >}}Important information{{< /notice >}}
+              * {{< tabs >}}{{< tab "Tab 1" >}}Content{{< /tab >}}{{< /tabs >}}
+
+            ## Diagrams and Visualizations
+            - Suggest appropriate diagrams or flowcharts that would enhance understanding
+            - Provide textual descriptions of what these diagrams should illustrate
+            - Include Mermaid or PlantUML markup for generating diagrams when appropriate
 
             ## SEO Optimization Rules
-            - Primary keyword in title, first paragraph, and at least one H2
-            - Secondary keywords naturally distributed throughout the content
-            - Meta description suggestion (150-160 characters)
+            - Primary keyword in title, URL slug, first paragraph, and at least one H2
+            - Secondary keywords naturally distributed throughout the content (especially in H3s)
+            - Strategic internal linking suggestions to strengthen site architecture
+            - External authoritative linking to enhance credibility
+            - Meta description suggestion (150-160 characters) that includes primary keyword
             - Image alt text recommendations that include relevant keywords
-            - Internal and external linking strategy suggestions
+
+            ## Quality Standards
+            - Ensure technical accuracy and up-to-date information
+            - Avoid jargon without explanation (unless targeting highly technical audience)
+            - Use consistent terminology throughout
+            - Provide sufficient context and background for complex concepts
+            - Balance theoretical explanations with practical applications
+            - Write in an authoritative but accessible voice
+            - Include relevant statistics, research findings, or benchmark data
 
             ## Metadata
             Current Date: {datetime.now().strftime("%Y-%m-%d")}
             Current Time: {datetime.now().strftime("%H:%M:%S")}
             Target Audience: Technical professionals, AI enthusiasts, developers, data scientists
-            Content Type: Technical explanation, industry analysis, or emerging technology overview
+            Content Type: Technical explanation, implementation guide, industry analysis, or emerging technology overview
         """
          )
     ]
@@ -108,13 +180,10 @@ def generate_article(context: str, tool_call_id: Annotated[str, InjectedToolCall
         CONTENT_DIR = os.path.join(
             os.path.dirname(os.getcwd()), "blog", "content")
 
-    print("Current working dir: ", os.getcwd())
-    print(f"Content directory: {CONTENT_DIR}")
+    # print(f"Content directory: {CONTENT_DIR}")
 
     if response.get('content'):
-        # print("got response.get('content')")
         articleLink = publish_article(CONTENT_DIR, response)
-        print("********************* article link ********************: ", articleLink)
         response['link'] = articleLink
 
     return Command(
@@ -122,7 +191,7 @@ def generate_article(context: str, tool_call_id: Annotated[str, InjectedToolCall
             "article": response,
             "messages": [
                 ToolMessage(
-                    "Successfully generated the article", tool_call_id=tool_call_id
+                    "Article generated successfully", tool_call_id=tool_call_id
                 )
             ],
         }

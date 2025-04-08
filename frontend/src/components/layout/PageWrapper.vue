@@ -1,6 +1,6 @@
 <template>
-  <div class="bg-background py-0 md:pt-6">
-    <div class="container min-h-[90vh] mx-auto md:py-0 md:px-2">
+  <div class="bg-background py-0 md:pt-2">
+    <div class="w-full min-h-[90vh] mx-auto md:py-0 md:px-2">
       <slot />
     </div>
   </div>

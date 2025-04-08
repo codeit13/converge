@@ -118,7 +118,7 @@
           </Breadcrumb>
         </div>
       </header>
-      <div class="flex flex-1 flex-col gap-4 px-2 py-4 md:p-4 pt-0">
+      <div class="flex flex-1 flex-col gap-4 px-2 py-4 md:px-4 md:py-2 pt-0">
         <slot />
       </div>
     </SidebarInset>

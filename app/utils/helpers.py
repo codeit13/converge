@@ -200,7 +200,7 @@ def publish_article(CONTENT_DIR, res: dict):
 
             f.write(front_matter + "\n\n" + article_data['content'])
         print(f"Article published successfully at {file_path}")
-        return f"http://localhost:1313/posts/{article_data['slug'].lower()}"
+        return f"https://blog.sleebit.com/posts/{article_data['slug'].lower()}"
     except Exception as e:
         print(f"Error publishing article: {e}")
         return None
