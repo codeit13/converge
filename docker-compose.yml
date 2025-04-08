@@ -46,7 +46,7 @@ services:
     container_name: vue_app
     volumes:
       - /var/www/converge-frontend:/target
-    command: ["sh", "-c", "if [ -z \"$(ls -A /target)\" ]; then cp -R /built_dist/* /target/; fi && tail -f /dev/null"]
+    command: ["sh", "-c", "rm -rf /target/* /target/.* 2>/dev/null && cp -R /built_dist/* /target/ && tail -f /dev/null"]
 
 # Docker Network
 networks:
