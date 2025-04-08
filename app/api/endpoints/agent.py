@@ -1,5 +1,5 @@
-from typing import List
-from fastapi import APIRouter, Request, HTTPException
+from typing import Annotated, List
+from fastapi import APIRouter, Header, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage
 from pydantic import BaseModel
@@ -47,9 +47,9 @@ async def run_agent(request: Request, query: RunRequest):
 
 
 @router.post("/stream")
-async def stream_agent(request: Request, query: StreamRequest) -> StreamingResponse:
+async def stream_agent(request: Request, query: StreamRequest, user_id: Annotated[str | None, Header()] = None) -> StreamingResponse:
     print(request.headers)
-    userid = request.headers.get("user_id")
+    userid = user_id
     if not userid:
         raise HTTPException(status_code=400, detail="Missing user_id header")
 

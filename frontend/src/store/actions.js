@@ -57,7 +57,7 @@ export default {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          user_id: state?.auth?.user?._id,
+          "user-id": state?.auth?.user?._id,
           Accept: "text/event-stream",
         },
         body: JSON.stringify({ prompt: userPrompt }),
