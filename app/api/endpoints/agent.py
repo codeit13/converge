@@ -48,6 +48,7 @@ async def run_agent(request: Request, query: RunRequest):
 
 @router.post("/stream")
 async def stream_agent(request: Request, query: StreamRequest) -> StreamingResponse:
+    print(request.headers)
     userid = request.headers.get("user_id")
     if not userid:
         raise HTTPException(status_code=400, detail="Missing user_id header")
