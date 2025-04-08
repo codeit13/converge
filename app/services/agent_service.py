@@ -36,11 +36,11 @@ class AgentService:
             api_key=settings.OPENAI_API_KEY, model="gpt-4o-mini", temperature=0.5, streaming=True)
 
         self.mcp_config = {
-            "youtube": {
-                "command": "node",
-                "args": ["mcp-servers/youtube/dist/index.js"],
-                "transport": "stdio"
-            },
+            # "youtube": {
+            #     "command": "node",
+            #     "args": ["mcp-servers/youtube/dist/index.js"],
+            #     "transport": "stdio"
+            # },
             "sequential": {
                 "command": "node",
                 "args": ["mcp-servers/sequential/dist/index.js"],
