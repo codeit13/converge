@@ -17,10 +17,6 @@ class ArticleFormat(BaseModel):
         ...,
         description="SEO-optimized title of the generated article (70-80 characters)"
     )
-    subtitle: str = Field(
-        ...,
-        description="Optional subtitle that provides additional context"
-    )
     content: str = Field(
         ...,
         description="Complete markdown content of the generated article"
@@ -208,7 +204,7 @@ def generate_article(context: str, tool_call_id: Annotated[str, InjectedToolCall
             "article": response,
             "messages": [
                 ToolMessage(
-                    "Article generated successfully", tool_call_id=tool_call_id
+                    f"Here's your generated article \n\n{response.get('content')}", tool_call_id=tool_call_id
                 )
             ],
         }

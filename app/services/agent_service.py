@@ -1,7 +1,9 @@
 from datetime import datetime
 import os
-from typing import Annotated, Any, List, Optional
-from langchain_core.messages import AnyMessage
+import traceback
+from typing import Annotated, Any, AsyncGenerator, Dict, List, Optional
+from uuid import uuid4
+from langchain_core.messages import AnyMessage, AIMessage, HumanMessage
 from langgraph.graph.message import add_messages
 from langchain_openai import ChatOpenAI
 from langchain_community.tools import BraveSearch
@@ -14,7 +16,21 @@ from langgraph.prebuilt.chat_agent_executor import AgentState
 from pydantic import BaseModel
 from services.tools.tools import generate_article
 from config import settings
+from models.run_history import Message as DBMessage, ChatSession
 from utils.helpers import error_handler, extract_json_from_string, extract_tool_names, make_serializable, publish_article, sse_format
+from utils.message_capture import create_user_message, create_assistant_message, save_messages_to_db
+
+# Define some color codes for print statements
+COLORS = {
+    "RED": "\033[91m",
+    "GREEN": "\033[92m",
+    "YELLOW": "\033[93m",
+    "BLUE": "\033[94m",
+    "MAGENTA": "\033[95m",
+    "CYAN": "\033[96m",
+    "WHITE": "\033[97m",
+    "RESET": "\033[0m"
+}
 
 
 class State(AgentState):
@@ -32,6 +48,7 @@ class AgentService:
         the configurations for each tool.
         """
 
+        self.agent_name = "Converge AI Assistant"
         self.llm = ChatOpenAI(
             api_key=settings.OPENAI_API_KEY, model="gpt-4o-mini", temperature=0.7, streaming=True)
 
@@ -57,9 +74,17 @@ class AgentService:
 
         This method creates the MultiServerMCPClient and waits for the tools to be available.
         """
+        print(f"{COLORS['BLUE']}Initializing agent service{COLORS['RESET']}")
         memory = MemorySaver()
         self.mcp_client = MultiServerMCPClient(self.mcp_config)
-        await self.mcp_client.__aenter__()
+        try:
+            await self.mcp_client.__aenter__()
+            print(
+                f"{COLORS['GREEN']}MCP client initialized successfully{COLORS['RESET']}")
+        except Exception as e:
+            print(
+                f"{COLORS['RED']}Error entering MCP client context: {e}{COLORS['RESET']}")
+            raise
 
         # Create the output parser and get JSON instructions.
         # output_parser = PydanticOutputParser(pydantic_object=ResponseFormat)
@@ -108,6 +133,8 @@ class AgentService:
 
         tools.extend([search_tool, article_generator_tool])
 
+        self.tools = tools
+
         self.agent = create_react_agent(
             state_schema=State,
             prompt=prompt,
@@ -120,6 +147,10 @@ class AgentService:
     @error_handler
     def set_user_id(self, user_id):
         self.user_id = user_id
+
+    @error_handler
+    def get_tools(self):
+        return self.tools
 
     @error_handler
     async def run(self, messages: list) -> dict:
@@ -146,66 +177,169 @@ class AgentService:
         return result
 
     @error_handler
-    async def stream(self, prompt: str):
-        """Asynchronously process a prompt and stream responses via SSE."""
-        if not self.agent:
-            await self.initialize()
-
-        # Send initial message
-        # yield sse_format("thinking", "Reasoning...")
-
+    async def stream(self, message: HumanMessage, user_id: str = None, chat_id: str = None) -> AsyncGenerator[Dict[str, Any], None]:
+        """Stream responses from the agent and capture messages for database storage"""
+        print(
+            f"{COLORS['CYAN']}Streaming response for message: {message.content[:30]}...{COLORS['RESET']}")
+        
+        # For message capture
+        all_messages = []
+        
         try:
-            config = {"configurable": {"thread_id": self.user_id}}
-            inputs = {"messages": [("user", prompt)]}
+            # Initialize agent if not already initialized
+            if not self.agent:
+                print(
+                    f"{COLORS['YELLOW']}Agent not initialized, initializing now{COLORS['RESET']}")
+                await self.initialize()
 
-            async for chunk in self.agent.astream(inputs, config, stream_mode="updates"):
-                print("chunk: ", chunk)
-                chunk = make_serializable(chunk)
+            # Set user_id for this session
+            self.user_id = user_id
 
-                # print("chunk serialized: ", chunk)
-                if "output" in chunk:
-                    print(
-                        "******************************* contains output *******************************")
-                    existing_state = self.agent.get_state(config).values
-                    yield sse_format("output", {'output': chunk['output'], 'existing_state': existing_state})
+            # Create config with thread_id
+            config = {"configurable": {
+                "thread_id": user_id}} if user_id else {}
 
-                elif "agent" in chunk:
-                    # print("contains agent")
-                    tool_names = extract_tool_names(chunk["agent"])
-                    # print("tool names: ", tool_names)
-                    if tool_names:
-                        yield sse_format("tool_calls", tool_names)
+            # Create and capture user message
+            user_db_message = create_user_message(message.content)
+            all_messages.append(user_db_message)
 
-                    content = chunk["agent"].get(
-                        "messages", [])[-1].get("content", None)
-                    # print("content: ", content)
+            # Prepare input messages
+            inputs = {"messages": [("user", message.content)]}
 
-                    yield sse_format("chunk", content)
+            # Stream responses
+            try:
+                stream_generator = self.agent.astream(
+                    inputs, config, stream_mode="updates")
+                async for chunk in stream_generator:
+                    chunk = make_serializable(chunk)
 
-                else:
-                    # print("contains neither")
-                    if 'tools' in chunk:
-                        yield sse_format("tool_messages", chunk['tools'])
+                    if "output" in chunk:
+                        # Capture output message
+                        try:
+                            assistant_message = create_assistant_message({
+                                "content": chunk.get("output", ""),
+                                "metadata": {
+                                    "role": "assistant",
+                                    "timestamp": datetime.utcnow().isoformat()
+                                }
+                            })
+                            all_messages.append(assistant_message)
+                        except Exception as msg_error:
+                            print(f"{COLORS['RED']}Error creating output message: {msg_error}{COLORS['RESET']}")
+                        
+                        yield sse_format("output", {'output': chunk['output'], 'existing_state': existing_state})
+                    elif "agent" in chunk:
+                        # Handle agent reasoning/tool calls
+                        tool_names = extract_tool_names(chunk["agent"])
+                        if tool_names:
+                            yield sse_format("tool_calls", tool_names)
+
+                        content = chunk["agent"].get(
+                            "messages", [])[-1].get("content", None)
+                        
+                        # Capture agent message if it has content
+                        if content:
+                            try:
+                                assistant_message = create_assistant_message({
+                                    "content": content,
+                                    "metadata": {
+                                        "role": "assistant",
+                                        "type": "reasoning",
+                                        "timestamp": datetime.utcnow().isoformat()
+                                    }
+                                })
+                                all_messages.append(assistant_message)
+                            except Exception as msg_error:
+                                print(f"{COLORS['RED']}Error creating agent message: {msg_error}{COLORS['RESET']}")
+                        
+                        yield sse_format("chunk", content)
+
                     else:
-                        yield sse_format("chunk", chunk)
+                        if 'tools' in chunk:
+                            yield sse_format("tool_messages", chunk['tools'])
+                        else:
+                            yield sse_format("chunk", chunk)
+                            
+            except GeneratorExit:
+                print(f"{COLORS['YELLOW']}Stream closed by client{COLORS['RESET']}")
+                # Try to save messages even if client disconnected
+                await save_messages_to_db(
+                    user_id=user_id, 
+                    chat_id=chat_id, 
+                    prompt=message.content, 
+                    messages=all_messages, 
+                    agent_name=self.agent_name
+                )
+                return
+            except Exception as stream_error:
+                print(f"{COLORS['RED']}Error during stream generation: {stream_error}{COLORS['RESET']}")
+                raise
 
             # Send completion message
-
-            existing_state = self.agent.get_state(config).values
-            existing_state = make_serializable(existing_state)
-            yield sse_format("complete", existing_state)
+            try:
+                existing_state = self.agent.get_state(config).values
+                existing_state = make_serializable(existing_state)
+                yield sse_format("complete", existing_state)
+            except Exception as state_error:
+                print(f"{COLORS['RED']}Error getting/sending state: {state_error}{COLORS['RESET']}")
+            
+            # Save messages to database at the end of the stream
+            try:
+                await save_messages_to_db(
+                    user_id=user_id, 
+                    chat_id=chat_id, 
+                    prompt=message.content, 
+                    messages=all_messages, 
+                    agent_name=self.agent_name
+                )
+            except Exception as db_error:
+                print(f"{COLORS['RED']}Error saving messages to database: {db_error}{COLORS['RESET']}")
 
         except Exception as e:
-            print(e)
+            print(f"{COLORS['RED']}Unhandled exception in stream method: {e}{COLORS['RESET']}")
             error_msg = f"Error in stream processing: {str(e)}"
             yield sse_format("error", error_msg)
 
     @error_handler
     async def shutdown(self):
         """Shutdown the agent service gracefully."""
+        print(
+            f"{COLORS['MAGENTA']}Shutting down agent service{COLORS['RESET']}")
+
         if self.mcp_client:
             try:
-                await self.mcp_client.__aexit__(None, None, None)
-                print("MCP client shutdown successfully.")
+                # Instead of using __aexit__ directly, use a safer approach
+                # Set the client to None before attempting to exit
+                client = self.mcp_client
+                self.mcp_client = None
+
+                # Use a safer exit approach
+                try:
+                    await client.__aexit__(None, None, None)
+                    print(
+                        f"{COLORS['GREEN']}MCP client shutdown successfully{COLORS['RESET']}")
+                except RuntimeError as re:
+                    if "Attempted to exit cancel scope in a different task" in str(re):
+                        # Just let it go - the event loop will clean up the resources
+                        print(
+                            f"{COLORS['YELLOW']}Handled cancel scope issue gracefully{COLORS['RESET']}")
+                    else:
+                        print(
+                            f"{COLORS['RED']}Unexpected RuntimeError during shutdown: {re}{COLORS['RESET']}")
+                except Exception as inner_e:
+                    print(
+                        f"{COLORS['RED']}Inner exception during shutdown: {inner_e}{COLORS['RESET']}")
+
+            except RuntimeError as e:
+                if "Attempted to exit cancel scope in a different task" in str(e):
+                    print(
+                        f"{COLORS['YELLOW']}Ignoring expected cancel scope task error{COLORS['RESET']}")
+                else:
+                    print(
+                        f"{COLORS['RED']}Error during shutdown: {e}{COLORS['RESET']}")
             except Exception as e:
-                print(f"Error during MCP shutdown: {e}")
+                print(
+                    f"{COLORS['RED']}Exception during shutdown: {e}{COLORS['RESET']}")
+        else:
+            print(
+                f"{COLORS['BLUE']}No MCP client to shutdown{COLORS['RESET']}")

@@ -169,8 +169,8 @@ def sanitize_text(title: str) -> str:
     return title.strip()
 
 
-def format_list(value):
-    return ', '.join(f'"{sanitize_text(v)}"' for v in value) if isinstance(value, list) else ''
+def format_list(items):
+    return "\n  " + "\n  ".join(f'"{item}"' for item in items) + "\n"
 
 
 @error_handler
@@ -198,18 +198,17 @@ def publish_article(CONTENT_DIR, res: dict):
     try:
         with open(file_path, "w", encoding="utf-8") as f:
             # Write the article content to the file.
-            front_matter = f"""+++
-title = "{sanitize_text(article_data['title'])}"
-subtitle = "{sanitize_text(article_data.get('subtitle', ''))}"
-slug = "{sanitize_text(article_data.get('slug', ''))}"
-date = "{datetime.now().isoformat()}"
-lastmod = "{datetime.now().isoformat()}"
-description = "{sanitize_text(article_data.get('description', ''))}"
-summary = "{sanitize_text(article_data['summary'])}"
-keywords = [{format_list(article_data.get('keywords', []))}]
-tags = [{format_list(article_data.get('tags', []))}]
-categories = [{format_list(article_data.get('categories', []))}]
-+++
+            front_matter = f"""---
+title: "{sanitize_text(article_data['title'])}"
+slug: "{sanitize_text(article_data.get('slug', ''))}"
+date: "{datetime.now().strftime("%Y-%m-%d")}"
+lastmod: "{datetime.now().strftime("%Y-%m-%d")}"
+description: "{sanitize_text(article_data.get('description', ''))}"
+summary: "{sanitize_text(article_data['summary'])}"
+keywords: [{format_list(article_data.get('keywords', []))}]
+tags: [{format_list(article_data.get('tags', []))}]
+categories: [{format_list(article_data.get('categories', []))}]
+---
 """.strip()
 
             f.write(front_matter + "\n\n" + article_data['content'])
