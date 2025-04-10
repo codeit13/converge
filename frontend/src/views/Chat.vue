@@ -451,6 +451,7 @@
         </div>
 
         <form
+          v-if="!showLoginPrompt"
           @submit.prevent="sendMessage"
           class="flex items-center justify-center"
         >
@@ -489,6 +490,42 @@
             </div>
           </div>
         </form>
+
+        <!-- Login prompt when user is not logged in -->
+        <div v-if="showLoginPrompt" class="flex items-center justify-center">
+          <div class="relative flex-1 items-center justify-center">
+            <div
+              class="min-h-[60px] md:min-h-[80px] bg-secondary/20 rounded-xl py-3 px-4 border border-primary/20 flex items-center justify-between"
+            >
+              <div class="flex items-center gap-3">
+                <div class="bg-primary/10 p-2 rounded-full">
+                  <User class="h-4 w-4 text-primary" />
+                </div>
+                <p class="text-sm font-medium text-foreground">
+                  Please log in to start chatting with the AI
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  class="border-primary/20 text-sm"
+                  @click="redirectToAuth"
+                >
+                  Log in
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="h-6 w-6 hover:bg-destructive/20 hover:text-destructive"
+                  @click="showLoginPrompt = false"
+                >
+                  <X class="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </Card>
   </div>
@@ -565,6 +602,7 @@ export default {
       showResponseOptions: false,
       sidebarOpen: false, // Controls mobile sidebar visibility
       isMobile: window.innerWidth < 768, // Used for responsive behavior
+      showLoginPrompt: false, // Controls visibility of login prompt
       // Example prompts for empty chat
       examplePrompts: [
         {
@@ -588,6 +626,9 @@ export default {
     },
     userId() {
       return this.$store.state?.auth?.user?._id || "1" || 1;
+    },
+    isUserLoggedIn() {
+      return !!this.$store.state?.auth?.user?._id;
     },
     chatSessions() {
       return this.$store.state.chatSessions || [];
@@ -680,6 +721,9 @@ export default {
     openLink(link) {
       window.open(link, "_blank");
     },
+    redirectToAuth() {
+      this.$router.push("/auth");
+    },
     async createNewChat() {
       try {
         // Get user ID from store
@@ -756,6 +800,13 @@ export default {
     async sendMessage() {
       // Don't proceed if no input or already loading
       if (!this.userInput.trim() || this.isLoading) return;
+
+      // Check if user is logged in
+      if (!this.isUserLoggedIn) {
+        this.showLoginPrompt = true;
+        this.userInput = "";
+        return;
+      }
 
       const userMessage = this.userInput.trim();
       this.userInput = "";
@@ -889,7 +940,7 @@ ${error}`;
         this.scrollToBottom();
       } else if (data.type === "complete") {
         const article = data?.data?.article;
-        messageStr = !this.messages[this.messages.length - 1].content || "";
+        let messageStr = !this.messages[this.messages.length - 1].content || "";
         if (!messageStr.includes(article?.link)) {
           if (article && article?.link) {
             this.messages[this.messages.length - 1].content += `

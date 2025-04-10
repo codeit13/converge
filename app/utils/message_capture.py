@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple, Optional
 from uuid import uuid4
 
 from models.run_history import Message as DBMessage, ChatSession
@@ -92,3 +92,51 @@ def create_assistant_message(chunk: Dict[str, Any]) -> DBMessage:
         timestamp=datetime.utcnow(),
         metadata=chunk.get("metadata", {})
     )
+
+
+async def get_chat_messages(chat_id: str, user_id: str) -> Tuple[List[Tuple[str, str]], Dict[str, Any]]:
+    """
+    Fetch messages for a chat session and convert them to agent format.
+    
+    Args:
+        chat_id: The ID of the chat session
+        user_id: The ID of the user
+        
+    Returns:
+        Tuple containing:
+        - List of (role, content) tuples for agent consumption
+        - Dictionary with metadata like success status and message count
+    """
+    result = {
+        "success": False,
+        "message_count": 0,
+        "error": None
+    }
+    
+    try:
+        if not chat_id or not user_id:
+            return [], result
+            
+        # Find existing chat session
+        existing_session = await ChatSession.find_one(
+            {"chat_id": chat_id, "user_id": user_id}
+        )
+        
+        if not existing_session or not existing_session.messages:
+            return [], result
+            
+        # Convert DB messages to agent messages format
+        agent_messages = []
+        for msg in existing_session.messages:
+            if msg.role == "user":
+                agent_messages.append(("user", msg.content))
+            elif msg.role == "assistant":
+                agent_messages.append(("assistant", msg.content))
+        
+        result["success"] = True
+        result["message_count"] = len(agent_messages)
+        return agent_messages, result
+        
+    except Exception as e:
+        result["error"] = str(e)
+        return [], result

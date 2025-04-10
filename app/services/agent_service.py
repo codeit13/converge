@@ -18,7 +18,7 @@ from services.tools.tools import generate_article
 from config import settings
 from models.run_history import Message as DBMessage, ChatSession
 from utils.helpers import error_handler, extract_json_from_string, extract_tool_names, make_serializable, publish_article, sse_format
-from utils.message_capture import create_user_message, create_assistant_message, save_messages_to_db
+from utils.message_capture import create_user_message, create_assistant_message, save_messages_to_db, get_chat_messages
 
 # Define some color codes for print statements
 COLORS = {
@@ -189,12 +189,34 @@ class AgentService:
             user_db_message = create_user_message(message.content)
             all_messages.append(user_db_message)
 
-            # Prepare input messages
+            # Prepare initial state and inputs
+            # Clearing previously generated article in agent state, if any
+            state_values = {"article": {}}
             inputs = {"messages": [("user", message.content)]}
 
             # Stream responses
             try:
-                self.agent.update_state(config, values={"article": {}})
+                # Check if agent state exists and messages are empty
+                current_state = self.agent.get_state(config)
+                if not current_state.values.get('messages', []) and chat_id:
+                    # Load chat history if available
+                    agent_messages, result = await get_chat_messages(chat_id, self.user_id)
+
+                    if result["success"]:
+                        print(
+                            f"{COLORS['GREEN']}Loaded {result['message_count']} messages from chat_id: {chat_id}{COLORS['RESET']}")
+                        state_values["messages"] = agent_messages
+                    elif result["error"]:
+                        print(
+                            f"{COLORS['RED']}Error loading messages: {result['error']}{COLORS['RESET']}")
+                    else:
+                        print(
+                            f"{COLORS['YELLOW']}No existing messages found for chat_id: {chat_id}{COLORS['RESET']}")
+
+                # Update agent state
+                self.agent.update_state(config, values=state_values)
+
+                # Start streaming
                 stream_generator = self.agent.astream(
                     inputs, config, stream_mode="updates")
                 async for chunk in stream_generator:
@@ -294,21 +316,51 @@ class AgentService:
             error_msg = f"Error in stream processing: {str(e)}"
             yield sse_format("error", error_msg)
 
-        @error_handler
-    async def run(self, messages: list) -> dict:
+    @error_handler
+    async def run(self, messages: list, chat_id: str = None) -> dict:
         """
         Run the agent with the given messages.
 
         If the agent is not initialized, it will be initialized first.
         Checks if the final output contains an article block and calls publish_article if so.
+
+        Args:
+            messages: The user message as a string or list
+            chat_id: Optional chat ID to load history from
         """
         if not self.agent:
             await self.initialize()
 
+        # Prepare configuration
         config = {"configurable": {"thread_id": self.user_id}}
-        inputs = {"messages": [("user", messages)]}
+        state_values = {"article": {}}
 
-        self.agent.update_state(config, values={"article": {}})
+        # Handle input messages formatting
+        if isinstance(messages, str):
+            user_input = messages
+        elif isinstance(messages, list) and len(messages) > 0:
+            user_input = messages[0] if isinstance(
+                messages[0], str) else str(messages[0])
+        else:
+            user_input = ""
+
+        inputs = {"messages": [("user", user_input)]}
+
+        # Load chat history if available
+        if chat_id:
+            try:
+                # Try to get chat history
+                agent_messages, result = await get_chat_messages(chat_id, self.user_id)
+                if result["success"] and agent_messages:
+                    print(
+                        f"{COLORS['GREEN']}Run: Loaded {result['message_count']} messages for context from chat_id: {chat_id}{COLORS['RESET']}")
+                    state_values["messages"] = agent_messages
+            except Exception as e:
+                print(
+                    f"{COLORS['RED']}Run: Error loading messages: {str(e)}{COLORS['RESET']}")
+
+        # Update state and run agent
+        self.agent.update_state(config, values=state_values)
         result = await self.agent.ainvoke(inputs, config)
 
         # Check if the output contains an article block
