@@ -53,16 +53,16 @@ class AgentService:
             api_key=settings.OPENAI_API_KEY, model="gpt-4o-mini", temperature=0.7, streaming=True)
 
         mcp_config = {
-            "youtube": {
-                "command": "node",
-                "args": ["mcp-servers/youtube/dist/index.js"],
-                "transport": "stdio"
-            },
-            "sequential": {
-                "command": "node",
-                "args": ["mcp-servers/sequential/dist/index.js"],
-                "transport": "stdio"
-            },
+            # "youtube": {
+            #     "command": "node",
+            #     "args": ["mcp-servers/youtube/dist/index.js"],
+            #     "transport": "stdio"
+            # },
+            # "sequential": {
+            #     "command": "node",
+            #     "args": ["mcp-servers/sequential/dist/index.js"],
+            #     "transport": "stdio"
+            # },
         }
 
         filtered_config = {}
@@ -114,6 +114,7 @@ class AgentService:
 
             ## Tool Usage Guidelines
             - Use tools deliberately and with clear purpose.
+            - Do not call any tool multiple times, make sure to only call a tool once.
             - Provide explicit reasoning for each tool selection.
             - If you don't know any information please try to use your available tools.
             - For latest information on any topic, use search tool.

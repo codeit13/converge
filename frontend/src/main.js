@@ -10,6 +10,16 @@ import App from "./App.vue";
 
 const app = createApp(App);
 
+app.directive("external-links", {
+  mounted(el) {
+    const links = el.querySelectorAll("a[href]");
+    links.forEach((link) => {
+      link.setAttribute("target", "_blank");
+      link.setAttribute("rel", "noopener noreferrer");
+    });
+  },
+});
+
 app.use(vue3GoogleLogin, {
   clientId:
     "648188226834-no9eddcthqh34420hvo3hc09vakt67au.apps.googleusercontent.com",

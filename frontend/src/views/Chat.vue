@@ -1,6 +1,6 @@
 <template>
   <div
-    class="h-[95vh] w-full flex flex-row overflow-hidden relative bg-gradient-to-l from-background via-secondary/5 to-background"
+    class="h-[90vh] w-full flex flex-row overflow-hidden relative bg-gradient-to-l from-background via-secondary/5 to-background"
     :style="{
       fontFamily: `'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif`,
     }"
@@ -169,7 +169,7 @@
             class="flex items-start gap-3 rounded-lg ml-auto max-w-[90%] md:max-w-[85%] lg:max-w-[80%] px-1"
           >
             <div
-              class="rounded-2xl p-3.5 shadow-sm break-words w-full bg-primary/5 backdrop-blur-sm border border-primary/10"
+              class="rounded-2xl p-3.5 shadow-sm break-words w-full min-w-[150px] bg-primary/5 backdrop-blur-sm border border-primary/10"
             >
               <p
                 class="prose prose-sm max-w-none dark:prose-invert text-foreground/90 tracking-wide leading-relaxed"
@@ -200,11 +200,11 @@
                 <Bot class="h-4 w-4" />
               </AvatarFallback>
             </Avatar>
-            <div class="flex flex-col w-full space-y-3">
+            <div class="flex flex-col w-full">
               <!-- Thinking section - collapsible -->
               <div
                 v-if="message.thinking && message.thinking.length > 0"
-                class="w-full"
+                class="w-full h-fit"
               >
                 <div
                   class="flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors rounded-lg hover:bg-secondary/5"
@@ -334,23 +334,24 @@
 
               <!-- Message content -->
               <div
-                class="group relative rounded-lg px-3 py-2 md:py-3 md:px-4 break-words w-full backdrop-blur-sm"
+                class="group relative rounded-lg px-0 py-1 md:py-0 md:px-4 break-words w-full backdrop-blur-sm"
                 :class="{
                   'bg-secondary/0': message.role === 'assistant',
                   'bg-secondary': message.role === 'user',
                 }"
               >
                 <div
+                  external-links
                   v-if="message.content"
                   v-html="formatMessage(message)"
-                  class="prose prose-sm max-w-none dark:prose-invert text-foreground/90 tracking-wide leading-relaxed custom-scrollbar"
+                  class="prose prose-sm max-w-none dark:prose-invert text-foreground/90 tracking-wide leading-relaxed custom-scrollbar rounded-2xl p-3.5 shadow-sm break-words w-full min-w-[150px] bg-primary/5 backdrop-blur-sm border border-primary/10"
                 ></div>
                 <div
                   v-else
-                  class="animate-bounce flex items-center space-x-2 pt-2 pb-3 md:pt-0"
+                  class="animate-bounce flex items-center space-x-2 pt-2 pb-3 ml-6 md:ml-0 md:mt-4 md:pt-0"
                 >
                   <span
-                    class="font-medium tracking-wide text-sm text-muted-foreground"
+                    class="font-sm tracking-wide text-normal text-muted-foreground"
                   >
                     Thinking
                   </span>
@@ -423,7 +424,7 @@
 
       <!-- Input area -->
       <div
-        class="sticky bottom-0 max-w-[95%] md:max-w-full lg:max-w-full xl:max-w-7xl mx-auto w-full backdrop-blur-sm border-t border-border/30 z-10"
+        class="sticky bottom-0 max-w-[95%] md:max-w-full lg:max-w-full xl:max-w-7xl mx-auto w-full backdrop-blur-sm z-10"
       >
         <!-- Response type toggle and options -->
         <!--<div class="flex items-center justify-between mb-3 px-1">
@@ -457,7 +458,10 @@
           </div>
         </div> -->
 
-        <form @submit.prevent="sendMessage" class="flex space-x-2 md:space-x-3">
+        <form
+          @submit.prevent="sendMessage"
+          class="flex items-center justify-center space-x-2 md:space-x-3"
+        >
           <div class="relative flex-1 items-center justify-center">
             <Textarea
               v-model="userInput"

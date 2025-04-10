@@ -34,13 +34,13 @@ class ArticleFormat(BaseModel):
         description="Summarizes the content or serves as a teaser to encourage readers to visit the page"
     )
     keywords: list[str] = Field(
-        ..., max_length=4, description="Primary and secondary keywords for SEO optimization"
+        ..., description="Primary and secondary keywords for SEO optimization Min: 2, Max: 4"
     )
     tags: list[str] = Field(
-        ..., max_length=4, description="Hugo taxonomies for article categorization"
+        ..., description="Hugo taxonomies for article categorization Min: 2, Max: 4"
     )
     categories: list[str] = Field(
-        ..., max_length=4, description="Main categories for the article in Hugo"
+        ..., description="Main categories for the article in Hugo Min: 2, Max: 4"
     )
 
 
