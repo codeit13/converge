@@ -34,16 +34,13 @@ class ArticleFormat(BaseModel):
         description="Summarizes the content or serves as a teaser to encourage readers to visit the page"
     )
     keywords: list[str] = Field(
-        ...,
-        description="Primary and secondary keywords for SEO optimization"
+        ..., max_length=4, description="Primary and secondary keywords for SEO optimization"
     )
     tags: list[str] = Field(
-        ...,
-        description="Hugo taxonomies for article categorization"
+        ..., max_length=4, description="Hugo taxonomies for article categorization"
     )
     categories: list[str] = Field(
-        ...,
-        description="Main categories for the article in Hugo"
+        ..., max_length=4, description="Main categories for the article in Hugo"
     )
 
 
@@ -69,11 +66,10 @@ def generate_article(context: str, tool_call_id: Annotated[str, InjectedToolCall
             2. An executive summary/introduction (150-200 words) that hooks the reader and outlines what they'll learn
             3. A well-structured content hierarchy using proper heading tags (H2, H3, H4)
             4. Strategic keyword placement throughout the content
-            5. A comprehensive table of contents for easy navigation
-            6. A strong conclusion with actionable takeaways
-            7. A related resources/further reading section
-            8. 5-7 relevant FAQs addressing common questions about the topic
-            9. Total word count between 1800-2500 words for comprehensive coverage
+            5. A strong conclusion with actionable takeaways
+            6. A related resources/further reading section
+            7. 5-7 relevant FAQs addressing common questions about the topic
+            8. Total word count between 1800-2500 words for comprehensive coverage
 
             ## Detailed Sectional Requirements
             

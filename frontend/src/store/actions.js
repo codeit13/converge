@@ -20,15 +20,15 @@ export default {
       // If payload is provided, use the user_id from it, otherwise get from state
       const userId = payload?.user_id || state.auth?.user?._id;
       if (!userId) {
-        throw new Error('User not authenticated');
+        throw new Error("User not authenticated");
       }
-      console.log('Creating chat with user_id:', userId);
+      console.log("Creating chat with user_id:", userId);
       const response = await axios.post(`${BACKEND_URL}/api/chats`, {
-        user_id: userId
+        user_id: userId,
       });
       return { data: response.data };
     } catch (error) {
-      console.error('Error creating chat:', error);
+      console.error("Error creating chat:", error);
       throw error;
     }
   },
@@ -45,7 +45,7 @@ export default {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${state.JWT_TOKEN}`,
-            "user-id": state?.auth?.user?._id,
+            "user-id": state?.auth?.user?._id || "1",
           },
         }
       );
@@ -77,7 +77,7 @@ export default {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "user-id": state?.auth?.user?._id || "", // Ensure it's never undefined
+          "user-id": state?.auth?.user?._id || "1" || "", // Ensure it's never undefined
           Accept: "text/event-stream",
         },
         body: JSON.stringify({ prompt: userPrompt }),
@@ -224,7 +224,7 @@ export default {
       const response = await axios.get(`${BACKEND_URL}/api/chats`, {
         headers: {
           "Content-Type": "application/json",
-          "user-id": state?.auth?.user?._id,
+          "user-id": state?.auth?.user?._id || "1",
         },
       });
       commit("SET_CHAT_SESSIONS", response.data);
@@ -246,7 +246,7 @@ export default {
       const response = await axios.get(`${BACKEND_URL}/api/chats/${chatId}`, {
         headers: {
           "Content-Type": "application/json",
-          "user-id": state?.auth?.user?._id,
+          "user-id": state?.auth?.user?._id || "1",
         },
       });
       commit("SET_CURRENT_CHAT_MESSAGES", response.data);
@@ -268,7 +268,7 @@ export default {
       await axios.delete(`${BACKEND_URL}/api/chats/${chatId}`, {
         headers: {
           "Content-Type": "application/json",
-          "user-id": state?.auth?.user?._id,
+          "user-id": state?.auth?.user?._id || "1",
         },
       });
       // Remove the chat from the local state
@@ -291,16 +291,13 @@ export default {
   // Analytics actions
   async getAnalyticsSummary({ state, commit }) {
     try {
-      const response = await axios.get(
-        `${BACKEND_URL}/api/analytics/summary`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${state.JWT_TOKEN}`,
-            "user-id": state?.auth?.user?._id,
-          },
-        }
-      );
+      const response = await axios.get(`${BACKEND_URL}/api/analytics/summary`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${state.JWT_TOKEN}`,
+          "user-id": state?.auth?.user?._id || "1",
+        },
+      });
       commit("SET_ANALYTICS_SUMMARY", response.data);
       return response.data;
     } catch (error) {
@@ -317,7 +314,7 @@ export default {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${state.JWT_TOKEN}`,
-            "user-id": state?.auth?.user?._id,
+            "user-id": state?.auth?.user?._id || "1",
           },
         }
       );

@@ -1,12 +1,10 @@
 <template>
   <div
-    class="h-[90vh] w-full flex flex-row overflow-hidden relative"
+    class="h-[95vh] w-full flex flex-row overflow-hidden relative bg-gradient-to-l from-background via-secondary/5 to-background"
     :style="{
       fontFamily: `'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif`,
     }"
   >
-    <!-- Removed mobile sidebar toggle button from here -->
-
     <!-- Overlay for mobile when sidebar is open -->
     <div
       v-if="sidebarOpen"
@@ -19,7 +17,7 @@
       :class="[
         'flex flex-col transition-all duration-300 z-40 overflow-hidden',
         sidebarOpen
-          ? 'border-r border-border fixed inset-y-0 left-0 w-72 md:w-64 md:static bg-background shadow-xl'
+          ? 'border-r border-border fixed inset-y-0 left-0 w-72 md:w-64 md:static bg-background/90 md:bg-transparent shadow-xl'
           : 'w-0 md:w-64',
       ]"
     >
@@ -57,7 +55,7 @@
       </ScrollArea>
     </div>
     <Card
-      class="flex-1 flex flex-col overflow-hidden shadow-lg border-none m-0 rounded-none bg-gradient-to-l from-background via-secondary/5 to-background md:ml-0"
+      class="flex-1 flex flex-col overflow-hidden shadow-lg border-none m-0 rounded-none md:ml-0 w-full"
       :class="{ 'ml-1': !sidebarOpen }"
     >
       <CardHeader class="border-b py-3 md:py-4 px-0 md:px-6">
@@ -100,7 +98,7 @@
       </CardHeader>
 
       <CardContent
-        class="flex-1 overflow-y-auto px-3 py-6 md:p-6 md:mx-auto md:max-w-3xl lg:max-w-4xl space-y-6 custom-scrollbar"
+        class="flex-1 overflow-y-auto px-3 py-6 md:p-6 md:mx-auto md:max-w-full lg:max-w-full xl:max-w-7xl space-y-6 custom-scrollbar"
         id="chat-container"
         ref="chatContainer"
       >
@@ -168,7 +166,7 @@
               initial: { opacity: 0, x: 20 },
               enter: { opacity: 1, x: 0, transition: { duration: 300 } },
             }"
-            class="flex items-start gap-3 rounded-lg ml-auto max-w-[90%] md:max-w-[80%] lg:max-w-[75%] px-1"
+            class="flex items-start gap-3 rounded-lg ml-auto max-w-[90%] md:max-w-[85%] lg:max-w-[80%] px-1"
           >
             <div
               class="rounded-2xl p-3.5 shadow-sm break-words w-full bg-primary/5 backdrop-blur-sm border border-primary/10"
@@ -194,7 +192,7 @@
               initial: { opacity: 0, x: -20 },
               enter: { opacity: 1, x: 0, transition: { duration: 300 } },
             }"
-            class="flex items-start gap-3 max-w-[95%] md:max-w-[85%] lg:max-w-[85%] px-1"
+            class="flex items-start gap-3 max-w-[95%] md:max-w-[90%] lg:max-w-[90%] px-1"
           >
             <Avatar class="h-8 w-8 shrink-0">
               <AvatarImage src="" />
@@ -425,7 +423,7 @@
 
       <!-- Input area -->
       <div
-        class="sticky bottom-0 p-3 md:p-5 lg:p-6 max-w-[95%] md:max-w-3xl lg:max-w-4xl mx-auto w-full bg-background/80 backdrop-blur-sm border-t border-border/30 z-10"
+        class="sticky bottom-0 max-w-[95%] md:max-w-full lg:max-w-full xl:max-w-7xl mx-auto w-full backdrop-blur-sm border-t border-border/30 z-10"
       >
         <!-- Response type toggle and options -->
         <!--<div class="flex items-center justify-between mb-3 px-1">
@@ -463,7 +461,7 @@
           <div class="relative flex-1 items-center justify-center">
             <Textarea
               v-model="userInput"
-              placeholder="Send a message..."
+              placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
               class="resize-none border-muted/30 focus:border-primary/40 bg-background/90 min-h-[60px] md:min-h-[80px] backdrop-blur-sm py-3 px-4 rounded-xl shadow-inner custom-scrollbar"
               @keydown="handleEnterKey"
               ref="textarea"
@@ -611,7 +609,7 @@ export default {
       return aiMessages[aiMessages.length - 1] || null;
     },
     userId() {
-      return this.$store.state?.auth?.user?._id;
+      return this.$store.state?.auth?.user?._id || "1" || 1;
     },
     chatSessions() {
       return this.$store.state.chatSessions || [];
@@ -683,8 +681,7 @@ export default {
     async createNewChat() {
       try {
         // Get user ID from store
-        const userId =
-          this.$store.state.auth.user?._id || this.$store.state.auth.user?.id;
+        const userId = this.$store.state.auth.user?._id || "1";
         if (!userId) {
           throw new Error("User not authenticated");
         }
@@ -890,7 +887,8 @@ ${error}`;
         this.scrollToBottom();
       } else if (data.type === "complete") {
         const article = data?.data?.article;
-        if (!this.messages[this.messages.length - 1].content.contains(article?.link)) {
+        messageStr = !this.messages[this.messages.length - 1].content || "";
+        if (!messageStr.includes(article?.link)) {
           if (article && article?.link) {
             this.messages[this.messages.length - 1].content += `
 
@@ -937,13 +935,15 @@ ${error}`;
       this.scrollToBottom();
     },
     handleEnterKey(e) {
-      if (!e.shiftKey && this.userInput.trim()) {
+      // If Enter is pressed without Shift, send the message
+      if (!e.shiftKey && e.key === "Enter" && this.userInput.trim()) {
         this.sendMessage();
+        e.preventDefault();
         return;
       }
 
-      if (e.shiftKey) {
-        // Allow Shift+Enter for new line
+      // If Shift+Enter is pressed, add a new line
+      if (e.shiftKey && e.key === "Enter") {
         const input = this.$refs.textarea?.$el?.querySelector("textarea");
         if (!input) return;
 
