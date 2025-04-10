@@ -198,19 +198,21 @@ export default {
         }
       );
 
-      localStorage.setItem("tokens", JSON.stringify(data.tokens));
-      commit("SET_AUTH_TOKENS", data.tokens);
-      commit(
-        "SET_TOASTER_DATA",
-        {
-          type: "success",
-          message: "Success",
-          description: "Login successful",
-        },
-        { root: true }
-      );
+      if (data?.status) {
+        localStorage.setItem("tokens", JSON.stringify(data?.data?.tokens));
+        commit("SET_AUTH_TOKENS", data?.data?.tokens);
+        commit(
+          "SET_TOASTER_DATA",
+          {
+            type: "success",
+            message: "Success",
+            description: "Login successful",
+          },
+          { root: true }
+        );
+      }
+      return data;
     } catch (e) {
-      console.error(e);
       commit(
         "SET_TOASTER_DATA",
         {
@@ -220,6 +222,7 @@ export default {
         },
         { root: true }
       );
+      throw e;
     } finally {
       commit("SET_IS_LOADING", false, { root: true });
     }

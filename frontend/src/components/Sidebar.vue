@@ -1,19 +1,26 @@
 <template>
   <SidebarProvider :open="isSidebarOpen" @onOpenChange="updateSidebarOpen">
-    <Sidebar :variant="variant">
+    <Sidebar
+      :variant="variant"
+      class="bg-gradient-to-b from-background via-secondary/10 to-background"
+    >
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" as-child>
               <a class="cursor-pointer" @click="$router.push('/')">
                 <div
-                  class="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"
+                  class="flex aspect-square items-center justify-center rounded-lg text-sidebar-primary-foreground"
                 >
-                  <Command class="size-4" />
+                  <img
+                    src="/images/logo.png"
+                    alt="Converge AI"
+                    class="size-8"
+                  />
                 </div>
                 <div class="grid flex-1 text-left text-sm leading-tight">
                   <span class="truncate font-semibold">
-                    {{ currentProject?.project?.name || "App" }}
+                    {{ currentProject?.project?.name || "Converge AI" }}
                   </span>
                   <!-- <span class="truncate text-xs">Enterprise</span> -->
                 </div>
@@ -22,20 +29,15 @@
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent
+        class="bg-gradient-to-b from-background via-secondary/10 to-background"
+      >
         <NavMain :items="navMain" />
         <!-- <NavProjects :projects="projects" /> -->
         <NavSecondary class="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser
-          v-if="user"
-          :user="{
-            name: user.name || user.email,
-            email: user.email,
-            image: user.image,
-          }"
-        />
+        <NavUser />
       </SidebarFooter>
     </Sidebar>
 

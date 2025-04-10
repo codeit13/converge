@@ -35,8 +35,12 @@ class StreamRequest(BaseModel):
     chat_id: Optional[str] = None
 
 
+class Tool(BaseModel):
+    name: str
+    description: str
+
 class GetToolsResponse(BaseModel):
-    tools: List[str]
+    tools: List[Tool]
 
 
 class ChatSessionResponse(BaseModel):
@@ -118,7 +122,7 @@ async def stream_agent(
         
         # Use the updated agent_service.stream method with chat_id for message capture
         response = StreamingResponse(
-            agent_service.stream(human_message, user_id=user_id, chat_id=query.chat_id),
+            agent_service.stream(human_message, chat_id=query.chat_id),
             media_type="text/event-stream"
         )
         response.headers["Cache-Control"] = "no-cache"

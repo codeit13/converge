@@ -6,19 +6,13 @@ import vue3GoogleLogin from "vue3-google-login";
 import "./assets/index.css";
 import router from "./router/index.js";
 import store from "./store/index.js";
+import externalLinks from "./directives/external-links.js";
+
 import App from "./App.vue";
 
 const app = createApp(App);
 
-app.directive("external-links", {
-  mounted(el) {
-    const links = el.querySelectorAll("a[href]");
-    links.forEach((link) => {
-      link.setAttribute("target", "_blank");
-      link.setAttribute("rel", "noopener noreferrer");
-    });
-  },
-});
+app.directive("external-links", externalLinks);
 
 app.use(vue3GoogleLogin, {
   clientId:

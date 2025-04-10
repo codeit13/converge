@@ -34,13 +34,13 @@ class ArticleFormat(BaseModel):
         description="Summarizes the content or serves as a teaser to encourage readers to visit the page"
     )
     keywords: list[str] = Field(
-        ..., description="Primary and secondary keywords for SEO optimization Min: 2, Max: 4"
+        ..., description="Primary and secondary keywords for SEO optimization (min: 2, max: 4)"
     )
     tags: list[str] = Field(
-        ..., description="Hugo taxonomies for article categorization Min: 2, Max: 4"
+        ..., description="Hugo taxonomies for article categorization (min: 2, max: 4)"
     )
     categories: list[str] = Field(
-        ..., description="Main categories for the article in Hugo Min: 2, Max: 4"
+        ..., description="Main categories for the article in Hugo (min: 2, max: 4)"
     )
 
 
@@ -194,10 +194,12 @@ def generate_article(context: str, tool_call_id: Annotated[str, InjectedToolCall
     if response.get('content'):
         articleLink = publish_article(CONTENT_DIR, response)
         response['link'] = articleLink
-    if response.get('link'):
-        message = f"Your article has been published at {response.get('link')}"
+
+    message = "Your article has been published"
+    if response.get('link', None):
+        message += f" at {response.get('link')}"
     else:
-        message = f"Your article has been published at {response.get('content')}"
+        message += f" with content {response.get('content', '')}"
 
     return Command(
         update={

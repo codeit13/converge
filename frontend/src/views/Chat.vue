@@ -1,10 +1,13 @@
 <template>
   <div
-    class="h-[90vh] w-full flex flex-row overflow-hidden relative bg-gradient-to-l from-background via-secondary/5 to-background"
+    class="h-[90svh] w-full flex flex-row overflow-hidden relative"
     :style="{
       fontFamily: `'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif`,
     }"
   >
+    <GoogleLogin :callback="oneTapGoogleLoginCallback" prompt>
+      <span></span>
+    </GoogleLogin>
     <!-- Overlay for mobile when sidebar is open -->
     <div
       v-if="sidebarOpen"
@@ -15,51 +18,49 @@
     <!-- Chat History Sidebar -->
     <div
       :class="[
-        'flex flex-col transition-all duration-300 z-40 overflow-hidden',
+        'transition-all duration-300 z-40 overflow-hidden',
         sidebarOpen
-          ? 'border-r border-border fixed inset-y-0 left-0 w-72 md:w-64 md:static bg-background/90 md:bg-transparent shadow-xl'
+          ? 'border-r border-border fixed inset-y-0 left-0 md:static bg-background md:bg-transparent shadow-xl'
           : 'w-0 md:w-64',
       ]"
     >
-      <div class="pt-12 md:pt-4 px-4 pb-4">
-        <div class="text-sm font-medium text-primary px-2">Chat History</div>
-      </div>
-
-      <ScrollArea class="flex-1 p-3">
-        <div class="space-y-2 overflow-hidden">
-          <Button
-            v-for="chat in chatSessions"
-            :key="chat.chat_id"
-            :variant="currentChatId === chat.chat_id ? 'secondary' : 'ghost'"
-            class="w-full justify-start gap-2 text-left"
-            @click="
-              loadChat(chat.chat_id);
-              closeSidebarOnMobile();
-            "
-          >
-            <MessageSquare class="h-4 w-4" />
-            <div class="flex-1 truncate">
-              {{ chat.title || "Untitled Chat" }}
-            </div>
+      <ChatHistory :chatSessions="chatSessions" :isMobile="isMobile">
+        <ScrollArea class="flex-1 p-2">
+          <div class="space-y-2 overflow-hidden">
             <Button
-              v-if="currentChatId === chat.chat_id"
-              variant="ghost"
-              size="icon"
-              class="h-4 w-4 hover:bg-destructive/20 hover:text-destructive"
-              @click.stop="deleteCurrentChat"
+              v-for="chat in chatSessions"
+              :key="chat.chat_id"
+              :variant="currentChatId === chat.chat_id ? 'secondary' : 'ghost'"
+              class="w-full justify-start gap-2 text-left"
+              @click="
+                loadChat(chat.chat_id);
+                closeSidebarOnMobile();
+              "
             >
-              <Trash2 class="h-3 w-3" />
+              <MessageSquare class="h-4 w-4" />
+              <div class="flex-1 truncate">
+                {{ chat.title || "Untitled Chat" }}
+              </div>
+              <Button
+                v-if="currentChatId === chat.chat_id"
+                variant="ghost"
+                size="icon"
+                class="h-4 w-4 hover:bg-destructive/20 hover:text-destructive"
+                @click.stop="deleteCurrentChat"
+              >
+                <Trash2 class="h-3 w-3" />
+              </Button>
             </Button>
-          </Button>
-        </div>
-      </ScrollArea>
+          </div>
+        </ScrollArea>
+      </ChatHistory>
     </div>
+
     <Card
-      class="flex-1 flex flex-col overflow-hidden shadow-lg border-none m-0 rounded-none md:ml-0 w-full"
+      class="flex-1 flex flex-col overflow-hidden shadow-lg border-none m-0 rounded-none md:ml-0 w-full bg-transparent"
       :class="{ 'ml-1': !sidebarOpen }"
     >
       <CardHeader class="border-b py-3 md:py-4 px-0 md:px-6">
-        <!-- :class="{ 'pl-12 md:pl-6': !sidebarOpen }" -->
         <div
           v-motion="{
             initial: { opacity: 0, y: -20 },
@@ -67,18 +68,18 @@
           }"
           class="flex items-center justify-between w-full"
         >
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-4">
             <!-- Sidebar toggle visible on all screen sizes -->
             <Button
               variant="outline"
               size="icon"
-              class="h-8 w-8 mr-1 flex md:hidden text-primary border-primary/20 hover:bg-primary/10"
+              class="h-8 w-8 flex md:hidden text-primary border-none hover:bg-primary/10"
               @click="toggleSidebar"
             >
-              <Menu v-if="!sidebarOpen" class="h-4 w-4" />
+              <History v-if="!sidebarOpen" class="h-4 w-4" />
               <X v-else class="h-4 w-4" />
             </Button>
-            <Bot class="h-5 w-5 md:h-6 md:w-6 text-primary" />
+            <Bot class="h-5 w-5 md:h-6 md:w-6 text-primary hidden md:block" />
             <div>
               <CardTitle class="font-display text-lg md:text-xl">
                 Chat with AI
@@ -98,9 +99,10 @@
       </CardHeader>
 
       <CardContent
-        class="flex-1 overflow-y-auto px-3 py-6 md:p-6 md:mx-auto md:max-w-full lg:max-w-full xl:max-w-7xl space-y-6 custom-scrollbar"
+        class="flex-1 overflow-y-auto px-1.5 py-6 md:p-6 md:mx-auto md:max-w-full lg:max-w-full xl:max-w-7xl space-y-6 custom-scrollbar"
         id="chat-container"
         ref="chatContainer"
+        external-links
       >
         <!-- Welcome message -->
         <div
@@ -116,19 +118,19 @@
           class="flex flex-col items-center justify-center h-full text-center space-y-8 text-muted-foreground py-8"
         >
           <div class="rounded-full bg-primary/10 p-6">
-            <Bot class="h-12 w-12 text-primary" />
+            <img src="/images/logo.png" class="h-12 w-12" />
           </div>
           <div>
             <h3 class="text-xl font-display font-medium mb-3">
               Start a conversation
             </h3>
             <p class="text-muted-foreground mb-6">
-              Ask a question or give an instruction to begin
+              Ask a question or give an instruction to begin writing an article
             </p>
 
             <!-- Example prompts that auto-send when clicked -->
             <div
-              class="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto px-4"
+              class="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto mt-6 px-4"
             >
               <Button
                 v-for="(prompt, index) in examplePrompts"
@@ -153,7 +155,6 @@
           </div>
         </div>
 
-        <!-- Chat messages -->
         <div
           v-for="(message, index) in messages"
           :key="index"
@@ -192,7 +193,7 @@
               initial: { opacity: 0, x: -20 },
               enter: { opacity: 1, x: 0, transition: { duration: 300 } },
             }"
-            class="flex items-start gap-3 max-w-[95%] md:max-w-[90%] lg:max-w-[90%] px-1"
+            class="flex items-start gap-3 max-w-[98%] md:max-w-[90%] lg:max-w-[90%] px-1"
           >
             <Avatar class="h-8 w-8 shrink-0">
               <AvatarImage src="" />
@@ -210,7 +211,7 @@
                   class="flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors rounded-lg hover:bg-secondary/5"
                   @click="toggleThinking(message)"
                 >
-                  <span class="text-normal font-medium text-muted-foreground">
+                  <span class="text-sm font-medium text-muted-foreground/70">
                     {{
                       message?.thinkingTime
                         ? "Thought for"
@@ -218,9 +219,9 @@
                     }}
                     <span
                       v-if="message.thinkingTime"
-                      class="ml-0.5 text-xs text-muted-foreground/70"
+                      class="ml-0.5 font-medium text-muted-foreground/80"
                     >
-                      ({{ formatTime(message.thinkingTime) }})
+                      {{ formatTime(message.thinkingTime) }}
                     </span>
                   </span>
                   <ChevronDown
@@ -341,7 +342,6 @@
                 }"
               >
                 <div
-                  external-links
                   v-if="message.content"
                   v-html="formatMessage(message)"
                   class="prose prose-sm max-w-none dark:prose-invert text-foreground/90 tracking-wide leading-relaxed custom-scrollbar rounded-2xl p-3.5 shadow-sm break-words w-full min-w-[150px] bg-primary/5 backdrop-blur-sm border border-primary/10"
@@ -351,7 +351,7 @@
                   class="animate-bounce flex items-center space-x-2 pt-2 pb-3 ml-6 md:ml-0 md:mt-4 md:pt-0"
                 >
                   <span
-                    class="font-sm tracking-wide text-normal text-muted-foreground"
+                    class="font-xs tracking-wide text-normal text-muted-foreground"
                   >
                     Thinking
                   </span>
@@ -424,82 +424,77 @@
 
       <!-- Input area -->
       <div
-        class="sticky bottom-0 max-w-[95%] md:max-w-full lg:max-w-full xl:max-w-7xl mx-auto w-full backdrop-blur-sm z-10"
+        class="sticky bottom-0 max-w-[98%] md:max-w-[70vw] lg:max-w-[70vw] xl:max-w-[70vw] mx-auto w-full backdrop-blur-sm z-10"
       >
         <!-- Response type toggle and options -->
-        <!--<div class="flex items-center justify-between mb-3 px-1">
-          
-          <div class="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              class="text-xs h-7 px-2"
-              @click="clearChat"
-            >
-              <RefreshCw class="h-3 w-3 mr-1" />
-              New Chat
-            </Button>
+        <div
+          class="flex items-center justify-start md:justify-end md:mr-14 px-1 overflow-x-auto custom-scrollbar"
+        >
+          <div class="flex gap-2 pb-2">
+            <div class="flex items-center gap-2 mr-2">
+              <Wrench class="h-4 w-4 text-muted-foreground" />
+              <span class="text-sm font-medium">Tools</span>
+            </div>
+            <div class="flex gap-2 overflow-x-auto whitespace-nowrap">
+              <Badge
+                v-for="tool in availableTools"
+                :key="tool.name"
+                variant="secondary"
+                class="px-2 md:px-2.5 cursor-help transition-colors hover:bg-secondary/80"
+                :title="tool.description"
+              >
+                {{ tool.name .replace(/_/g, " ") .replace(/(?<!^)[A-Z][a-z]+/g, (match) =>
+                ` ${match}`) .replace(/(^|\s)\S/g, (l) => l.toUpperCase()) }}
+              </Badge>
+            </div>
           </div>
-          
-          <div class="flex items-center space-x-2">
-            <span class="text-xs text-muted-foreground">Regular</span>
-            <button
-              @click="toggleResponseType"
-              type="button"
-              class="relative inline-flex h-5 w-10 items-center rounded-full transition-colors"
-              :class="useStreaming ? 'bg-secondary' : 'bg-muted'"
-            >
-              <span
-                class="inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform"
-                :class="useStreaming ? 'translate-x-5.5' : 'translate-x-1'"
-              />
-            </button>
-            <span class="text-xs text-muted-foreground">Streaming</span>
-          </div>
-        </div> -->
+        </div>
 
         <form
           @submit.prevent="sendMessage"
-          class="flex items-center justify-center space-x-2 md:space-x-3"
+          class="flex items-center justify-center"
         >
           <div class="relative flex-1 items-center justify-center">
             <Textarea
               v-model="userInput"
-              placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
-              class="resize-none border-muted/30 focus:border-primary/40 bg-background/90 min-h-[60px] md:min-h-[80px] backdrop-blur-sm py-3 px-4 rounded-xl shadow-inner custom-scrollbar"
+              placeholder="Type a message..."
+              class="resize-none border-muted/30 focus:border-primary/40 bg-background/90 min-h-[60px] md:min-h-[80px] backdrop-blur-sm py-3 pl-4 pr-[90px] rounded-xl shadow-inner custom-scrollbar"
               @keydown="handleEnterKey"
               ref="textarea"
             ></Textarea>
-            <Button
-              v-if="userInput.trim().length > 0"
-              type="button"
-              variant="ghost"
-              size="icon"
-              class="absolute right-3 top-1/2 transform -translate-y-1/2 opacity-70 hover:opacity-100 transition-opacity h-6 w-6"
-              @click="userInput = ''"
+            <div
+              class="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1"
             >
-              <X class="h-3.5 w-3.5" />
-            </Button>
+              <Button
+                v-if="userInput.trim().length > 0"
+                type="button"
+                variant="ghost"
+                size="icon"
+                class="opacity-70 hover:opacity-100 transition-opacity h-8 w-8"
+                @click="userInput = ''"
+              >
+                <X class="h-4 w-4" />
+              </Button>
+              <Button
+                type="submit"
+                :disabled="isLoading || userInput.trim().length === 0"
+                class="h-8 w-8 p-0 bg-primary hover:bg-primary/90 transition-colors"
+                v-motion:hover="{
+                  scale: 1.05,
+                  transition: { type: 'spring', stiffness: 300, damping: 15 },
+                }"
+              >
+                <Send class="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-          <Button
-            type="submit"
-            :disabled="isLoading || userInput.trim().length === 0"
-            class="rounded-xl h-10 w-10 md:h-12 md:w-12 p-0 bg-primary hover:bg-primary/90 transition-colors shadow-md flex-shrink-0"
-            v-motion:hover="{
-              scale: 1.05,
-              transition: { type: 'spring', stiffness: 300, damping: 15 },
-            }"
-          >
-            <Send class="h-4 w-4 md:h-5 md:w-5" />
-          </Button>
         </form>
       </div>
     </Card>
   </div>
 </template>
 
-<script>
-// Component imports
+<script setup>
 import {
   Card,
   CardContent,
@@ -517,6 +512,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import Input from "@/components/ui/input/Input.vue";
 import Textarea from "@/components/ui/textarea/Textarea.vue";
 import {
@@ -526,7 +522,7 @@ import {
   Copy,
   ExternalLink,
   Lightbulb,
-  Menu,
+  History,
   MessageSquare,
   Plus,
   RefreshCw,
@@ -536,50 +532,26 @@ import {
   Trash2,
   User,
   X,
+  Wrench,
+  Clock,
 } from "lucide-vue-next";
+
+// Import ChatHistory component
+import ChatHistory from "@/components/chat/ChatHistory.vue";
+</script>
+
+<script>
+// Component imports
+
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { mapState } from "vuex";
 
 export default {
   name: "Chat",
-  components: {
-    Card,
-    CardContent,
-    CardFooter,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-    Button,
-    Avatar,
-    AvatarFallback,
-    AvatarImage,
-    Input,
-    ScrollArea,
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-    Textarea,
-    Bot,
-    ChevronDown,
-    ChevronUp,
-    Copy,
-    ExternalLink,
-    Lightbulb,
-    MessageSquare,
-    Plus,
-    RefreshCw,
-    Save,
-    Send,
-    Trash2,
-    User,
-    X,
-    Menu,
-    SparklesIcon,
-  },
   data() {
     return {
+      isOneTapPromptEnabled: location.href.includes("localhost") ? false : true,
       userInput: "",
       messages: [],
       isLoading: false,
@@ -592,6 +564,7 @@ export default {
       responseType: "streaming", // or "thinking"
       showResponseOptions: false,
       sidebarOpen: false, // Controls mobile sidebar visibility
+      isMobile: window.innerWidth < 768, // Used for responsive behavior
       // Example prompts for empty chat
       examplePrompts: [
         {
@@ -606,6 +579,7 @@ export default {
     };
   },
   computed: {
+    ...mapState(["availableTools"]),
     latestAiMessage() {
       const aiMessages = this.messages.filter(
         (message) => message.role === "assistant"
@@ -634,6 +608,7 @@ export default {
     },
   },
   async mounted() {
+    this.$store.dispatch("getAvailableTools");
     // Add event listener for Ctrl+K
     document.addEventListener("keydown", (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
@@ -650,13 +625,36 @@ export default {
     //   this.$refs.messageInput.focus();
     // }
 
+    // Initialize Google One Tap if enabled
+    if (this.isOneTapPromptEnabled && !this.$store.state.auth.user) {
+      window.google?.accounts.id.initialize({
+        client_id: process.env.VUE_APP_GOOGLE_CLIENT_ID,
+        callback: this.oneTapGoogleLoginCallback,
+      });
+      window.google?.accounts.id.prompt();
+    }
+
     // Scroll to bottom
     this.scrollToBottom();
   },
   unmounted() {
-    // this.$store.commit("SET_SIDEBAR_OPEN", true);
+    clearInterval(this.intervalId);
+    window.removeEventListener("resize", this.handleResize);
   },
   methods: {
+    async oneTapGoogleLoginCallback(response) {
+      if (response.credential) {
+        await this.$store.dispatch("auth/loginViaGoogle", {
+          idToken: response.credential,
+        });
+        await this.$store.dispatch("auth/getUserProfile");
+      } else {
+        await this.$store.dispatch("auth/loginViaGoogle", {
+          code: response.code,
+        });
+        await this.$store.dispatch("auth/getUserProfile");
+      }
+    },
     toggleSidebar() {
       this.sidebarOpen = !this.sidebarOpen;
     },
@@ -764,7 +762,7 @@ export default {
       this.isLoading = true;
 
       try {
-        // Create new chat if none exists
+        // Get or create chat ID
         if (!this.currentChatId) {
           const newChat = await this.createNewChat();
           if (!newChat?.chat_id) {
@@ -976,6 +974,22 @@ ${error}`;
           });
         }, 100);
       }
+
+      setTimeout(() => {
+        try {
+          document.querySelectorAll("a").forEach((anchor) => {
+            if (
+              !anchor.hasAttribute("target") ||
+              anchor.getAttribute("target") !== "_blank"
+            ) {
+              anchor.setAttribute("target", "_blank");
+              anchor.setAttribute("rel", "noopener noreferrer");
+            }
+          });
+        } catch (e) {
+          console.log(e);
+        }
+      }, 500);
     },
     formatMessage(message) {
       let content = message?.content ?? "";
@@ -1009,12 +1023,21 @@ ${error}`;
       return DOMPurify.sanitize(html);
     },
     formatTime(seconds) {
-      const minutes = Math.floor(seconds / 60);
-      const remainingSeconds = seconds % 60;
-      return `${minutes}min ${remainingSeconds}s`;
+      if (seconds < 60) {
+        return `${seconds}s`;
+      }
+      if (seconds < 3600) {
+        const minutes = Math.floor(seconds / 60);
+        return `${minutes}m`;
+      }
+      if (seconds < 86400) {
+        const hours = Math.floor(seconds / 3600);
+        return `${hours}hr`;
+      }
+      return "0s";
     },
     copyToClipboard(text) {
-      if (!this.chatId) return;
+      if (!text) return;
 
       navigator.clipboard
         .writeText(text)
@@ -1033,6 +1056,10 @@ ${error}`;
             show: true,
           });
         });
+    },
+    // Handle window resize to detect mobile/desktop view
+    handleResize() {
+      this.isMobile = window.innerWidth < 768;
     },
     regenerateResponse(message) {
       if (this.isLoading) return;

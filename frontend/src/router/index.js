@@ -14,6 +14,18 @@ const routes = [
     component: () => import("@/views/Analytics.vue"),
     meta: { requiresAuth: false },
   },
+  {
+    path: "/privacy",
+    name: "Privacy",
+    component: () => import("@/views/Privacy.vue"),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: "/terms-and-conditions",
+    name: "TermsAndConditions",
+    component: () => import("@/views/TermsAndConditions.vue"),
+    meta: { requiresAuth: false },
+  },
 
   // User Auth & Payment Routes begin here
   {

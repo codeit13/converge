@@ -58,6 +58,7 @@
     richColors
     :duration="6000"
     :expand="true"
+    :closeButton="true"
   />
   <Loader />
 </template>

@@ -63,10 +63,7 @@ export default {
   },
 
   // Stream agent responses
-  streamAgent(
-    { state, commit },
-    { userPrompt, chatId = null, onMessage, onError, onComplete }
-  ) {
+  streamAgent: async ({ state }, { userPrompt, chatId, onMessage, onError, onComplete }) => {
     try {
       // Create a fetch request with proper headers for streaming
       const controller = new AbortController();
@@ -80,7 +77,7 @@ export default {
           "user-id": state?.auth?.user?._id || "1" || "", // Ensure it's never undefined
           Accept: "text/event-stream",
         },
-        body: JSON.stringify({ prompt: userPrompt }),
+        body: JSON.stringify({ prompt: userPrompt, chat_id: chatId }),
         credentials: "include",
         signal: signal,
       })
@@ -205,7 +202,10 @@ export default {
           },
         }
       );
-      commit("SET_HISTORY", data);
+
+      if (data?.tools?.length > 0) {
+        commit("SET_AVAILABLE_TOOLS", data?.tools);
+      }
     } catch (error) {
       console.log(error);
 

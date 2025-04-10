@@ -166,31 +166,7 @@ class AgentService:
         return self.tools
 
     @error_handler
-    async def run(self, messages: list) -> dict:
-        """
-        Run the agent with the given messages.
-
-        If the agent is not initialized, it will be initialized first.
-        Checks if the final output contains an article block and calls publish_article if so.
-        """
-        if not self.agent:
-            await self.initialize()
-
-        config = {"configurable": {"thread_id": self.user_id}}
-        inputs = {"messages": [("user", messages)]}
-
-        result = await self.agent.ainvoke(inputs, config)
-
-        # Check if the output contains an article block
-        response_text = result.get("response", "")
-        res = extract_json_from_string(response_text)
-        if res:
-            articleSlug = await publish_article(self.CONTENT_DIR, res)
-            result["articleSlug"] = articleSlug
-        return result
-
-    @error_handler
-    async def stream(self, message: HumanMessage, user_id: str = None, chat_id: str = None) -> AsyncGenerator[Dict[str, Any], None]:
+    async def stream(self, message: HumanMessage, chat_id: str = None) -> AsyncGenerator[Dict[str, Any], None]:
         """Stream responses from the agent and capture messages for database storage"""
         print(
             f"{COLORS['CYAN']}Streaming response for message: {message.content[:30]}...{COLORS['RESET']}")
@@ -205,12 +181,9 @@ class AgentService:
                     f"{COLORS['YELLOW']}Agent not initialized, initializing now{COLORS['RESET']}")
                 await self.initialize()
 
-            # Set user_id for this session
-            self.user_id = user_id
-
-            # Create config with thread_id
+            # Create config with thread_id (using chat_id)
             config = {"configurable": {
-                "thread_id": user_id}} if user_id else {}
+                "thread_id": chat_id}} if chat_id else {}
 
             # Create and capture user message
             user_db_message = create_user_message(message.content)
@@ -221,6 +194,7 @@ class AgentService:
 
             # Stream responses
             try:
+                self.agent.update_state(config, values={"article": {}})
                 stream_generator = self.agent.astream(
                     inputs, config, stream_mode="updates")
                 async for chunk in stream_generator:
@@ -280,7 +254,7 @@ class AgentService:
                     f"{COLORS['YELLOW']}Stream closed by client{COLORS['RESET']}")
                 # Try to save messages even if client disconnected
                 await save_messages_to_db(
-                    user_id=user_id,
+                    user_id=self.user_id,  # Use the class variable user_id
                     chat_id=chat_id,
                     prompt=message.content,
                     messages=all_messages,
@@ -304,7 +278,7 @@ class AgentService:
             # Save messages to database at the end of the stream
             try:
                 await save_messages_to_db(
-                    user_id=user_id,
+                    user_id=self.user_id,  # Use the class variable user_id
                     chat_id=chat_id,
                     prompt=message.content,
                     messages=all_messages,
@@ -319,6 +293,31 @@ class AgentService:
                 f"{COLORS['RED']}Unhandled exception in stream method: {e}{COLORS['RESET']}")
             error_msg = f"Error in stream processing: {str(e)}"
             yield sse_format("error", error_msg)
+
+        @error_handler
+    async def run(self, messages: list) -> dict:
+        """
+        Run the agent with the given messages.
+
+        If the agent is not initialized, it will be initialized first.
+        Checks if the final output contains an article block and calls publish_article if so.
+        """
+        if not self.agent:
+            await self.initialize()
+
+        config = {"configurable": {"thread_id": self.user_id}}
+        inputs = {"messages": [("user", messages)]}
+
+        self.agent.update_state(config, values={"article": {}})
+        result = await self.agent.ainvoke(inputs, config)
+
+        # Check if the output contains an article block
+        response_text = result.get("response", "")
+        res = extract_json_from_string(response_text)
+        if res:
+            articleSlug = await publish_article(self.CONTENT_DIR, res)
+            result["articleSlug"] = articleSlug
+        return result
 
     @error_handler
     async def shutdown(self):

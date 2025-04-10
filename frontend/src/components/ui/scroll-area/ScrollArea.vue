@@ -1,8 +1,8 @@
 <script setup>
-import { cn } from '@/lib/utils';
-import { ScrollAreaCorner, ScrollAreaRoot, ScrollAreaViewport } from 'reka-ui';
-import { computed } from 'vue';
-import ScrollBar from './ScrollBar.vue';
+import { cn } from "@/lib/utils";
+import { ScrollAreaCorner, ScrollAreaRoot, ScrollAreaViewport } from "reka-ui";
+import { computed } from "vue";
+import ScrollBar from "./ScrollBar.vue";
 
 const props = defineProps({
   type: { type: String, required: false },
