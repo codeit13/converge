@@ -1,6 +1,6 @@
 <template>
   <div
-    class="h-[90svh] w-full flex flex-row overflow-hidden relative"
+    class="h-[95dvh] w-full flex flex-row overflow-hidden relative"
     :style="{
       fontFamily: `'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif`,
     }"
