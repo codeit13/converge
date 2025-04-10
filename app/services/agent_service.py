@@ -52,18 +52,29 @@ class AgentService:
         self.llm = ChatOpenAI(
             api_key=settings.OPENAI_API_KEY, model="gpt-4o-mini", temperature=0.7, streaming=True)
 
-        self.mcp_config = {
-            # "youtube": {
-            #     "command": "node",
-            #     "args": ["mcp-servers/youtube/dist/index.js"],
-            #     "transport": "stdio"
-            # },
+        mcp_config = {
+            "youtube": {
+                "command": "node",
+                "args": ["mcp-servers/youtube/dist/index.js"],
+                "transport": "stdio"
+            },
             "sequential": {
                 "command": "node",
                 "args": ["mcp-servers/sequential/dist/index.js"],
                 "transport": "stdio"
             },
         }
+
+        filtered_config = {}
+        for tool_name, config in mcp_config.items():
+            file_path = config["args"][0]
+            if os.path.exists(file_path):
+                filtered_config[tool_name] = config
+            else:
+                print(
+                    f"{COLORS['RED']}Tool {tool_name} not found at {file_path}{COLORS['RESET']}")
+
+        self.mcp_config = filtered_config
         self.agent = None
         self.mcp_client = None
 
@@ -112,7 +123,8 @@ class AgentService:
             - Return tool responses as it is without any additional formatting.
 
             ## Article Generation Guidelines (When Requested)
-            - Don't provide exact article, if a tool have already provided the same info, you can simply refer to the info provided by the tool.
+            - Don't provide exact article or it's summary, if a tool has already provided the same info, you can restructure the info provided by the tool.
+            - If tool gave article link, return to use in markdown, that your article has been generated and published at {{article_link}}.
 
             ** Metadata **
             Current Date: {datetime.now().strftime("%Y-%m-%d")}
@@ -181,10 +193,10 @@ class AgentService:
         """Stream responses from the agent and capture messages for database storage"""
         print(
             f"{COLORS['CYAN']}Streaming response for message: {message.content[:30]}...{COLORS['RESET']}")
-        
+
         # For message capture
         all_messages = []
-        
+
         try:
             # Initialize agent if not already initialized
             if not self.agent:
@@ -225,8 +237,9 @@ class AgentService:
                             })
                             all_messages.append(assistant_message)
                         except Exception as msg_error:
-                            print(f"{COLORS['RED']}Error creating output message: {msg_error}{COLORS['RESET']}")
-                        
+                            print(
+                                f"{COLORS['RED']}Error creating output message: {msg_error}{COLORS['RESET']}")
+
                         yield sse_format("output", {'output': chunk['output'], 'existing_state': existing_state})
                     elif "agent" in chunk:
                         # Handle agent reasoning/tool calls
@@ -236,7 +249,7 @@ class AgentService:
 
                         content = chunk["agent"].get(
                             "messages", [])[-1].get("content", None)
-                        
+
                         # Capture agent message if it has content
                         if content:
                             try:
@@ -250,8 +263,9 @@ class AgentService:
                                 })
                                 all_messages.append(assistant_message)
                             except Exception as msg_error:
-                                print(f"{COLORS['RED']}Error creating agent message: {msg_error}{COLORS['RESET']}")
-                        
+                                print(
+                                    f"{COLORS['RED']}Error creating agent message: {msg_error}{COLORS['RESET']}")
+
                         yield sse_format("chunk", content)
 
                     else:
@@ -259,20 +273,22 @@ class AgentService:
                             yield sse_format("tool_messages", chunk['tools'])
                         else:
                             yield sse_format("chunk", chunk)
-                            
+
             except GeneratorExit:
-                print(f"{COLORS['YELLOW']}Stream closed by client{COLORS['RESET']}")
+                print(
+                    f"{COLORS['YELLOW']}Stream closed by client{COLORS['RESET']}")
                 # Try to save messages even if client disconnected
                 await save_messages_to_db(
-                    user_id=user_id, 
-                    chat_id=chat_id, 
-                    prompt=message.content, 
-                    messages=all_messages, 
+                    user_id=user_id,
+                    chat_id=chat_id,
+                    prompt=message.content,
+                    messages=all_messages,
                     agent_name=self.agent_name
                 )
                 return
             except Exception as stream_error:
-                print(f"{COLORS['RED']}Error during stream generation: {stream_error}{COLORS['RESET']}")
+                print(
+                    f"{COLORS['RED']}Error during stream generation: {stream_error}{COLORS['RESET']}")
                 raise
 
             # Send completion message
@@ -281,22 +297,25 @@ class AgentService:
                 existing_state = make_serializable(existing_state)
                 yield sse_format("complete", existing_state)
             except Exception as state_error:
-                print(f"{COLORS['RED']}Error getting/sending state: {state_error}{COLORS['RESET']}")
-            
+                print(
+                    f"{COLORS['RED']}Error getting/sending state: {state_error}{COLORS['RESET']}")
+
             # Save messages to database at the end of the stream
             try:
                 await save_messages_to_db(
-                    user_id=user_id, 
-                    chat_id=chat_id, 
-                    prompt=message.content, 
-                    messages=all_messages, 
+                    user_id=user_id,
+                    chat_id=chat_id,
+                    prompt=message.content,
+                    messages=all_messages,
                     agent_name=self.agent_name
                 )
             except Exception as db_error:
-                print(f"{COLORS['RED']}Error saving messages to database: {db_error}{COLORS['RESET']}")
+                print(
+                    f"{COLORS['RED']}Error saving messages to database: {db_error}{COLORS['RESET']}")
 
         except Exception as e:
-            print(f"{COLORS['RED']}Unhandled exception in stream method: {e}{COLORS['RESET']}")
+            print(
+                f"{COLORS['RED']}Unhandled exception in stream method: {e}{COLORS['RESET']}")
             error_msg = f"Error in stream processing: {str(e)}"
             yield sse_format("error", error_msg)
 

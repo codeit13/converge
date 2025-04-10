@@ -1,14 +1,67 @@
 <template>
   <div
-    class="h-[90vh] w-full flex flex-col overflow-hidden"
+    class="h-[90vh] w-full flex flex-row overflow-hidden relative"
     :style="{
-      fontFamily: `ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'`,
+      fontFamily: `'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif`,
     }"
   >
-    <Card
-      class="flex-1 flex flex-col overflow-hidden shadow-lg border-none m-0 rounded-none bg-gradient-to-l from-background via-secondary/5 to-background"
+    <!-- Removed mobile sidebar toggle button from here -->
+
+    <!-- Overlay for mobile when sidebar is open -->
+    <div
+      v-if="sidebarOpen"
+      class="fixed inset-0 bg-black/50 z-40 md:hidden"
+      @click="toggleSidebar"
+    ></div>
+
+    <!-- Chat History Sidebar -->
+    <div
+      :class="[
+        'flex flex-col transition-all duration-300 z-40 overflow-hidden',
+        sidebarOpen
+          ? 'border-r border-border fixed inset-y-0 left-0 w-72 md:w-64 md:static bg-background shadow-xl'
+          : 'w-0 md:w-64',
+      ]"
     >
-      <CardHeader class="border-b py-3 md:py-4 px-4 md:px-6">
+      <div class="pt-12 md:pt-4 px-4 pb-4">
+        <div class="text-sm font-medium text-primary px-2">Chat History</div>
+      </div>
+
+      <ScrollArea class="flex-1 p-3">
+        <div class="space-y-2 overflow-hidden">
+          <Button
+            v-for="chat in chatSessions"
+            :key="chat.chat_id"
+            :variant="currentChatId === chat.chat_id ? 'secondary' : 'ghost'"
+            class="w-full justify-start gap-2 text-left"
+            @click="
+              loadChat(chat.chat_id);
+              closeSidebarOnMobile();
+            "
+          >
+            <MessageSquare class="h-4 w-4" />
+            <div class="flex-1 truncate">
+              {{ chat.title || "Untitled Chat" }}
+            </div>
+            <Button
+              v-if="currentChatId === chat.chat_id"
+              variant="ghost"
+              size="icon"
+              class="h-4 w-4 hover:bg-destructive/20 hover:text-destructive"
+              @click.stop="deleteCurrentChat"
+            >
+              <Trash2 class="h-3 w-3" />
+            </Button>
+          </Button>
+        </div>
+      </ScrollArea>
+    </div>
+    <Card
+      class="flex-1 flex flex-col overflow-hidden shadow-lg border-none m-0 rounded-none bg-gradient-to-l from-background via-secondary/5 to-background md:ml-0"
+      :class="{ 'ml-1': !sidebarOpen }"
+    >
+      <CardHeader class="border-b py-3 md:py-4 px-0 md:px-6">
+        <!-- :class="{ 'pl-12 md:pl-6': !sidebarOpen }" -->
         <div
           v-motion="{
             initial: { opacity: 0, y: -20 },
@@ -17,6 +70,16 @@
           class="flex items-center justify-between w-full"
         >
           <div class="flex items-center gap-2">
+            <!-- Sidebar toggle visible on all screen sizes -->
+            <Button
+              variant="outline"
+              size="icon"
+              class="h-8 w-8 mr-1 flex md:hidden text-primary border-primary/20 hover:bg-primary/10"
+              @click="toggleSidebar"
+            >
+              <Menu v-if="!sidebarOpen" class="h-4 w-4" />
+              <X v-else class="h-4 w-4" />
+            </Button>
             <Bot class="h-5 w-5 md:h-6 md:w-6 text-primary" />
             <div>
               <CardTitle class="font-display text-lg md:text-xl">
@@ -25,19 +88,19 @@
             </div>
           </div>
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            class="text-xs md:text-sm"
-            @click="clearChat"
+            class="text-xs md:text-sm border-primary/20 hover:bg-primary/10 text-primary"
+            @click="createNewChat"
           >
-            <RefreshCw class="h-3 w-3 mr-1" />
+            <Plus class="h-3 w-3 mr-1" />
             New Chat
           </Button>
         </div>
       </CardHeader>
 
       <CardContent
-        class="flex-1 overflow-y-auto px-0 py-6 md:p-6 md:mx-20 space-y-6 custom-scrollbar"
+        class="flex-1 overflow-y-auto px-3 py-6 md:p-6 md:mx-auto md:max-w-3xl lg:max-w-4xl space-y-6 custom-scrollbar"
         id="chat-container"
         ref="chatContainer"
       >
@@ -52,18 +115,43 @@
               transition: { duration: 700, delay: 300 },
             },
           }"
-          class="flex flex-col items-center justify-center h-full text-center space-y-6 text-muted-foreground"
+          class="flex flex-col items-center justify-center h-full text-center space-y-8 text-muted-foreground py-8"
         >
           <div class="rounded-full bg-primary/10 p-6">
             <Bot class="h-12 w-12 text-primary" />
           </div>
           <div>
-            <h3 class="text-xl font-display font-medium mb-2">
+            <h3 class="text-xl font-display font-medium mb-3">
               Start a conversation
             </h3>
-            <p class="text-muted-foreground">
+            <p class="text-muted-foreground mb-6">
               Ask a question or give an instruction to begin
             </p>
+
+            <!-- Example prompts that auto-send when clicked -->
+            <div
+              class="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto px-4"
+            >
+              <Button
+                v-for="(prompt, index) in examplePrompts"
+                :key="index"
+                variant="outline"
+                class="p-4 h-auto text-sm text-left justify-start hover:border-primary/50 hover:bg-primary/5 group border-border/60"
+                @click="sendExamplePrompt(prompt)"
+              >
+                <div>
+                  <p class="font-medium text-primary mb-1 flex items-center">
+                    <SparklesIcon class="h-3 w-3 mr-2 text-primary/70" />
+                    {{ prompt.title }}
+                  </p>
+                  <p
+                    class="text-muted-foreground text-xs line-clamp-2 group-hover:text-foreground/90 transition-colors whitespace-normal"
+                  >
+                    {{ prompt.text }}
+                  </p>
+                </div>
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -80,11 +168,13 @@
               initial: { opacity: 0, x: 20 },
               enter: { opacity: 1, x: 0, transition: { duration: 300 } },
             }"
-            class="flex items-start gap-2 rounded-lg ml-auto max-w-[85%] md:max-w-[75%] lg:max-w-[70%] px-1"
+            class="flex items-start gap-3 rounded-lg ml-auto max-w-[90%] md:max-w-[80%] lg:max-w-[75%] px-1"
           >
-            <div class="rounded-2xl p-3 shadow-sm break-words w-full">
+            <div
+              class="rounded-2xl p-3.5 shadow-sm break-words w-full bg-primary/5 backdrop-blur-sm border border-primary/10"
+            >
               <p
-                class="prose prose-sm max-w-none dark:prose-invert text-[#b3b3b3] tracking-wide"
+                class="prose prose-sm max-w-none dark:prose-invert text-foreground/90 tracking-wide leading-relaxed"
               >
                 {{ message.content }}
               </p>
@@ -104,7 +194,7 @@
               initial: { opacity: 0, x: -20 },
               enter: { opacity: 1, x: 0, transition: { duration: 300 } },
             }"
-            class="flex items-start gap-2 max-w-[95%] md:max-w-[75%] lg:max-w-[70%] px-1"
+            class="flex items-start gap-3 max-w-[95%] md:max-w-[85%] lg:max-w-[85%] px-1"
           >
             <Avatar class="h-8 w-8 shrink-0">
               <AvatarImage src="" />
@@ -141,7 +231,7 @@
                   />
                 </div>
                 <div
-                  class="relative rounded-lg px-3 py-0 mt-2 text-sm bg-background/5 transition-all duration-2000 h-full overflow-hidden"
+                  class="relative rounded-lg px-3 py-0 mt-2 text-sm bg-background/5 transition-all duration-2000"
                   :class="{
                     'h-0 overflow-hidden': !message.showThinking,
                   }"
@@ -167,7 +257,6 @@
                           class="text-secondary"
                         >
                           Calling
-
                           {{
                             step.data
                               .map((tool) =>
@@ -247,7 +336,7 @@
 
               <!-- Message content -->
               <div
-                class="group relative rounded-lg px-2 py-1 md:py-2 md:px-4 break-words w-full backdrop-blur-sm"
+                class="group relative rounded-lg px-3 py-2 md:py-3 md:px-4 break-words w-full backdrop-blur-sm"
                 :class="{
                   'bg-secondary/0': message.role === 'assistant',
                   'bg-secondary': message.role === 'user',
@@ -256,7 +345,7 @@
                 <div
                   v-if="message.content"
                   v-html="formatMessage(message)"
-                  class="prose prose-sm max-w-none dark:prose-invert text-[#b3b3b3] tracking-wide"
+                  class="prose prose-sm max-w-none dark:prose-invert text-foreground/90 tracking-wide leading-relaxed custom-scrollbar"
                 ></div>
                 <div
                   v-else
@@ -335,7 +424,9 @@
       </CardContent>
 
       <!-- Input area -->
-      <div class="p-2 md:p-5 lg:p-6">
+      <div
+        class="sticky bottom-0 p-3 md:p-5 lg:p-6 max-w-[95%] md:max-w-3xl lg:max-w-4xl mx-auto w-full bg-background/80 backdrop-blur-sm border-t border-border/30 z-10"
+      >
         <!-- Response type toggle and options -->
         <!--<div class="flex items-center justify-between mb-3 px-1">
           
@@ -370,14 +461,13 @@
 
         <form @submit.prevent="sendMessage" class="flex space-x-2 md:space-x-3">
           <div class="relative flex-1 items-center justify-center">
-            <Input
-              type="text"
+            <Textarea
               v-model="userInput"
-              placeholder="Type your message..."
-              class="min-h-10 md:min-h-12 pr-10 rounded-xl border-muted-foreground/20 focus:border-primary focus:ring-primary shadow-sm font-medium text-sm md:text-base"
-              @keydown.enter.prevent="handleEnterKey"
-              ref="messageInput"
-            />
+              placeholder="Send a message..."
+              class="resize-none border-muted/30 focus:border-primary/40 bg-background/90 min-h-[60px] md:min-h-[80px] backdrop-blur-sm py-3 px-4 rounded-xl shadow-inner custom-scrollbar"
+              @keydown="handleEnterKey"
+              ref="textarea"
+            ></Textarea>
             <Button
               v-if="userInput.trim().length > 0"
               type="button"
@@ -413,30 +503,48 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
+  CardFooter,
   CardTitle,
 } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Input from "@/components/ui/input/Input.vue";
+import Textarea from "@/components/ui/textarea/Textarea.vue";
 import {
   Bot,
   ChevronDown,
+  ChevronUp,
   Copy,
+  ExternalLink,
   Lightbulb,
+  Menu,
+  MessageSquare,
+  Plus,
   RefreshCw,
   Save,
   Send,
+  SparklesIcon,
+  Trash2,
   User,
   X,
 } from "lucide-vue-next";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
+import { mapState } from "vuex";
 
 export default {
   name: "Chat",
   components: {
     Card,
     CardContent,
+    CardFooter,
     CardDescription,
     CardHeader,
     CardTitle,
@@ -445,64 +553,180 @@ export default {
     AvatarFallback,
     AvatarImage,
     Input,
+    ScrollArea,
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+    Textarea,
     Bot,
     ChevronDown,
+    ChevronUp,
     Copy,
+    ExternalLink,
     Lightbulb,
+    MessageSquare,
+    Plus,
     RefreshCw,
     Save,
     Send,
+    Trash2,
     User,
     X,
+    Menu,
+    SparklesIcon,
   },
   data() {
     return {
       userInput: "",
-      messages: [
-        {
-          role: "system",
-          content: "Conversation started",
-        },
-      ],
+      messages: [],
       isLoading: false,
       lastUserMessage: "",
       useStreaming: true,
+      currentChatId: null,
+      intervalId: null,
+      isTyping: false,
+      showThinking: {},
+      responseType: "streaming", // or "thinking"
+      showResponseOptions: false,
+      sidebarOpen: false, // Controls mobile sidebar visibility
+      // Example prompts for empty chat
+      examplePrompts: [
+        {
+          title: "Article on Latest AI news",
+          text: "Write an article on what's currently happening in AI related to coding, provide insights and analysis.",
+        },
+        {
+          title: "Generate code",
+          text: "Write a JavaScript function to find the most frequent element in an array.",
+        },
+      ],
     };
   },
   computed: {
     latestAiMessage() {
-      for (let i = this.messages.length - 1; i >= 0; i--) {
-        if (this.messages[i].role === "assistant" && this.messages[i].content) {
-          return this.messages[i];
-        }
-      }
-      return null;
+      const aiMessages = this.messages.filter(
+        (message) => message.role === "assistant"
+      );
+      return aiMessages[aiMessages.length - 1] || null;
+    },
+    userId() {
+      return this.$store.state?.auth?.user?._id;
+    },
+    chatSessions() {
+      return this.$store.state.chatSessions || [];
     },
   },
   watch: {
     messages: {
       deep: true,
       handler() {
-        this.scrollToBottom();
+        // this.scrollToBottom();
+      },
+    },
+    propName: {
+      immediate: true,
+      handler(newVal, oldVal) {
+        // Handle prop changes
       },
     },
   },
-  mounted() {
-    // this.$store.commit("SET_SIDEBAR_OPEN", false);
-    const inputComponent = this.$refs.messageInput;
-    if (inputComponent && inputComponent.$el) {
-      const inputElement = inputComponent.$el.querySelector("input");
-      if (inputElement) {
-        inputElement.focus();
+  async mounted() {
+    // Add event listener for Ctrl+K
+    document.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        this.$refs.textarea?.focus();
       }
-    }
+    });
+
+    // Load chat sessions
+    await this.$store.dispatch("getChatSessions");
+
+    // Set focus on input
+    // if (this.$refs.messageInput) {
+    //   this.$refs.messageInput.focus();
+    // }
+
+    // Scroll to bottom
+    this.scrollToBottom();
   },
   unmounted() {
     // this.$store.commit("SET_SIDEBAR_OPEN", true);
   },
   methods: {
+    toggleSidebar() {
+      this.sidebarOpen = !this.sidebarOpen;
+    },
+
+    closeSidebarOnMobile() {
+      // Close sidebar automatically on mobile after selecting a chat
+      if (window.innerWidth < 768) {
+        // md breakpoint
+        this.sidebarOpen = false;
+      }
+    },
+
+    sendExamplePrompt(prompt) {
+      if (this.isLoading) return;
+
+      // Set the prompt text as user input
+      this.userInput = prompt.text;
+
+      // Send the message
+      this.sendMessage();
+    },
+
     openLink(link) {
       window.open(link, "_blank");
+    },
+    async createNewChat() {
+      try {
+        // Get user ID from store
+        const userId =
+          this.$store.state.auth.user?._id || this.$store.state.auth.user?.id;
+        if (!userId) {
+          throw new Error("User not authenticated");
+        }
+
+        // Create new chat with user ID
+        const response = await this.$store.dispatch("createChat", {
+          user_id: userId,
+        });
+        if (!response?.data?.chat_id) {
+          throw new Error("Failed to create chat: Invalid response");
+        }
+
+        console.log("Created new chat session with ID:", response.data.chat_id);
+        this.currentChatId = response.data.chat_id;
+        this.messages = [];
+        this.userInput = "";
+        this.lastUserMessage = "";
+        this.isLoading = false;
+        return response.data;
+      } catch (error) {
+        console.error("Error creating chat:", error);
+        this.$store.commit("SET_TOASTER_DATA", {
+          message: "Failed to create chat: " + error.message,
+          type: "error",
+        });
+        return null;
+      }
+      await this.$store.dispatch("getChatSessions");
+    },
+
+    async loadChat(chatId) {
+      this.currentChatId = chatId;
+      const messages = await this.$store.dispatch("getChatMessages", chatId);
+      this.messages = messages;
+      this.scrollToBottom();
+    },
+
+    async deleteCurrentChat() {
+      if (this.currentChatId) {
+        await this.$store.dispatch("deleteChat", this.currentChatId);
+        // this.createNewChat();
+      }
     },
     clearChat() {
       this.messages = [
@@ -531,190 +755,206 @@ export default {
       }
     },
     async sendMessage() {
-      const messageText = this.userInput.trim();
-      if (!messageText || this.isLoading) return;
+      // Don't proceed if no input or already loading
+      if (!this.userInput.trim() || this.isLoading) return;
 
-      // Add user message
-      this.messages.push({
-        role: "user",
-        content: messageText,
-      });
-
-      // Scroll to bottom immediately
-      this.scrollToBottom();
-
-      // Clear input and save last message
-      this.lastUserMessage = messageText;
+      const userMessage = this.userInput.trim();
       this.userInput = "";
-
-      // Add placeholder for AI response
-      const aiMessage = {
-        role: "assistant",
-        content: "",
-        thinking: [],
-        showThinking: true, // Start with thinking expanded
-        thinkingStartTime: Date.now(), // Start tracking time
-      };
-      this.messages.push(aiMessage);
-
-      // Set loading state
       this.isLoading = true;
-      const aiMessageIndex = this.messages.length - 1;
 
-      if (this.useStreaming) {
-        // Use streaming API
-        let fullResponse = "";
+      try {
+        // Create new chat if none exists
+        if (!this.currentChatId) {
+          const newChat = await this.createNewChat();
+          if (!newChat?.chat_id) {
+            throw new Error("Failed to create chat session");
+          }
+          this.currentChatId = newChat.chat_id;
+        }
 
-        const stream = this.$store.dispatch("streamAgent", {
-          userPrompt: messageText,
-          onMessage: (data) => {
-            console.log("Stream data:", data);
-            // Process each stream message based on type
-
-            if (data.type === "thinking") {
-              // Add thinking step
-              this.messages[aiMessageIndex].thinking.push({
-                type: "thinking",
-                data: data.data,
-              });
-              this.scrollToBottom();
-            } else if (data.type == "tool_calls") {
-              const tools = data?.data || [];
-
-              this.messages[aiMessageIndex].thinking.push({
-                type: "tool_calls",
-                data: tools,
-              });
-              this.scrollToBottom();
-            } else if (data.type == "tool_messages") {
-              const message =
-                data?.data?.messages[data?.data?.messages.length - 1];
-
-              if (message) {
-                let messageContent = message?.content;
-                try {
-                  if (typeof messageContent == "object") {
-                    messageContent = JSON.stringify(messageContent, null, 2);
-                  } else {
-                    messageContent = JSON.parse(messageContent);
-                    messageContent = JSON.stringify(messageContent, null, 2);
-                  }
-                } catch (e) {
-                  console.log(e);
-                }
-                this.messages[aiMessageIndex].thinking.push({
-                  type: "tool_messages",
-                  data: messageContent,
-                });
-              }
-              this.scrollToBottom();
-            } else if (data.type === "chunk" && data.data && data.data != "") {
-              let chunk = data.data;
-
-              try {
-                chunk = JSON.parse(chunk);
-              } catch (e) {
-                console.log(
-                  "Seems like chunk is already a valid string, processing it"
-                );
-              }
-
-              // Handle direct message chunks
-              if (typeof chunk == "object" && chunk.message_to_user) {
-                fullResponse = chunk.message_to_user;
-                this.messages[aiMessageIndex].content = fullResponse;
-              } else {
-                fullResponse = chunk;
-                this.messages[aiMessageIndex].content = chunk;
-              }
-
-              this.scrollToBottom();
-            } else if (data.type == "complete") {
-              const article = data?.data?.article;
-              if (article && article?.link) {
-                this.messages[
-                  aiMessageIndex
-                ].content += `\n\n\n Article is now live at ${article.link}`;
-              }
-            } else if (data.type == "error") {
-              this.messages[
-                aiMessageIndex
-              ].content = `Seems like our servers are taking a coffee break. Please try again after the break :)\n\n${data.data}`;
-
-              this.isLoading = false;
-              this.scrollToBottom();
-            }
-          },
-          onError: (error) => {
-            console.error("Streaming error:", error);
-            this.messages[
-              aiMessageIndex
-            ].content = `Seems like our servers are taking a coffee break. Please try again after the break :)\n\n${error}`;
-            this.isLoading = false;
-            this.scrollToBottom();
-          },
-          onComplete: () => {
-            this.isLoading = false;
-            if (this.messages[aiMessageIndex]) {
-              // Calculate thinking time
-              const endTime = Date.now();
-              const thinkingTime = Math.round(
-                (endTime - aiMessage.thinkingStartTime) / 1000
-              );
-              this.messages[aiMessageIndex].thinkingTime = thinkingTime;
-
-              // Auto collapse thinking when complete
-              setTimeout(() => {
-                if (this.messages[aiMessageIndex]) {
-                  this.messages[aiMessageIndex].showThinking = false;
-                }
-              }, 1000);
-            }
-            this.scrollToBottom();
-          },
+        // Add user message
+        this.messages.push({
+          role: "user",
+          content: userMessage,
+          timestamp: new Date().toISOString(),
         });
 
-        // Set timeout for stream
-        // setTimeout(() => {
-        //   if (this.isLoading) {
-        //     stream.close();
-        //     this.isLoading = false;
-        //   }
-        // }, 60000);
-      } else {
-        // Use regular API
-        try {
-          const response = await this.$store.dispatch("runAgent", messageText);
-          this.messages[aiMessageIndex].content =
-            response.data?.response || "I processed your request.";
-        } catch (error) {
-          console.error("Error running agent:", error);
-          this.messages[aiMessageIndex].content =
-            "Sorry, I encountered an error processing your request.";
+        // Add assistant message placeholder
+        const assistantMessage = {
+          role: "assistant",
+          content: "",
+          thinking: [],
+          timestamp: new Date().toISOString(),
+          thinkingStartTime: Date.now(),
+          showThinking: true,
+        };
+        this.messages.push(assistantMessage);
+        this.scrollToBottom();
+        this.lastUserMessage = userMessage;
+
+        // Choose between streaming and non-streaming API
+        if (this.useStreaming) {
+          // Use streaming API
+          await this.$store.dispatch("streamAgent", {
+            userPrompt: userMessage,
+            chatId: this.currentChatId,
+            onMessage: this.onMessage,
+            onError: this.onError,
+            onComplete: this.onComplete,
+          });
+        } else {
+          // Use non-streaming API
+          const response = await this.$store.dispatch("runAgent", userMessage);
+          if (response?.data) {
+            this.messages[this.messages.length - 1].content =
+              response.data.content;
+          }
+          this.isLoading = false;
+        }
+      } catch (error) {
+        console.error("Error in sendMessage:", error);
+
+        // Check if we need to add an error message
+        if (
+          this.messages.length > 0 &&
+          this.messages[this.messages.length - 1].role === "assistant"
+        ) {
+          this.messages[
+            this.messages.length - 1
+          ].content = `Seems like our servers are taking a coffee break. Please try again after the break :)
+
+${error}`;
+        } else {
           this.messages.push({
             role: "system",
-            content: "An error occurred. Please try again.",
+            content: "Failed to send message. Please try again.",
+            timestamp: new Date().toISOString(),
           });
-        } finally {
-          this.isLoading = false;
+        }
+
+        this.isLoading = false;
+        this.scrollToBottom();
+      }
+    },
+    onMessage(data) {
+      console.log("Stream data:", data);
+      // Process each stream message based on type
+      if (data.type === "thinking") {
+        const thinking = data?.data || [];
+        this.messages[this.messages.length - 1].thinking.push({
+          type: "thinking",
+          data: thinking,
+        });
+        this.scrollToBottom();
+      } else if (data.type === "tool_calls") {
+        const tools = data?.data || [];
+        this.messages[this.messages.length - 1].thinking.push({
+          type: "tool_calls",
+          data: tools,
+        });
+        this.scrollToBottom();
+      } else if (data.type === "tool_messages") {
+        const message = data?.data?.messages[data?.data?.messages.length - 1];
+        if (message) {
+          let messageContent = message?.content;
+          if (typeof messageContent === "object") {
+            messageContent = JSON.stringify(messageContent, null, 2);
+          }
+          this.messages[this.messages.length - 1].thinking.push({
+            type: "tool_messages",
+            data: messageContent,
+          });
           this.scrollToBottom();
         }
+      } else if (data.type === "stream") {
+        // Update AI response content
+        const currentMessage = this.messages[this.messages.length - 1];
+        currentMessage.content += data.data;
+        this.scrollToBottom();
+      } else if (data.type === "chunk" && data.data && data.data !== "") {
+        let chunk = data.data;
+        try {
+          chunk = JSON.parse(chunk);
+        } catch (e) {
+          console.log(
+            "Seems like chunk is already a valid string, processing it"
+          );
+        }
+        // Handle direct message chunks
+        if (typeof chunk === "object" && chunk.message_to_user) {
+          this.messages[this.messages.length - 1].content =
+            chunk.message_to_user;
+        } else {
+          this.messages[this.messages.length - 1].content = chunk;
+        }
+        this.scrollToBottom();
+      } else if (data.type === "complete") {
+        const article = data?.data?.article;
+        if (!this.messages[this.messages.length - 1].content.contains(article?.link)) {
+          if (article && article?.link) {
+            this.messages[this.messages.length - 1].content += `
+
+Article is now live at ${article.link}`;
+          }
+        }
+      } else if (data.type === "error") {
+        this.messages[
+          this.messages.length - 1
+        ].content = `Seems like our servers are taking a coffee break. Please try again after the break :)
+
+${data.data}`;
+        this.isLoading = false;
+        this.scrollToBottom();
       }
+    },
+    onError(error) {
+      console.error("Streaming error:", error);
+      this.messages[
+        this.messages.length - 1
+      ].content = `Seems like our servers are taking a coffee break. Please try again after the break :)
+
+${error}`;
+      this.isLoading = false;
+      this.scrollToBottom();
+    },
+    onComplete() {
+      this.isLoading = false;
+      const lastMessage = this.messages[this.messages.length - 1];
+      if (lastMessage) {
+        // Calculate thinking time
+        const endTime = Date.now();
+        const thinkingTime = Math.round(
+          (endTime - lastMessage.thinkingStartTime) / 1000
+        );
+        lastMessage.thinkingTime = thinkingTime;
+        // Auto collapse thinking when complete
+        setTimeout(() => {
+          if (lastMessage) {
+            lastMessage.showThinking = false;
+          }
+        }, 1000);
+      }
+      this.scrollToBottom();
     },
     handleEnterKey(e) {
       if (!e.shiftKey && this.userInput.trim()) {
         this.sendMessage();
-      } else if (e.shiftKey) {
-        // Allow Shift+Enter for new line
-        const input = this.$refs.messageInput.$el.querySelector("input");
+        return;
+      }
 
-        const start = input.selectionStart;
-        const end = input.selectionEnd;
+      if (e.shiftKey) {
+        // Allow Shift+Enter for new line
+        const input = this.$refs.textarea?.$el?.querySelector("textarea");
+        if (!input) return;
+
+        const start = input.selectionStart || 0;
+        const end = input.selectionEnd || 0;
         this.userInput =
           this.userInput.substring(0, start) +
           "\n" +
           this.userInput.substring(end);
         input.selectionStart = input.selectionEnd = start + 1;
+        e.preventDefault();
       }
     },
     scrollToBottom() {
@@ -737,7 +977,31 @@ export default {
       let content = message?.content ?? "";
       if (!content) return "";
 
-      const html = marked.parse(content);
+      // Configure marked to add classes to code blocks
+      const renderer = new marked.Renderer();
+      renderer.code = (code, language) => {
+        return `<div class="code-block-wrapper"><pre class="language-${
+          language || "text"
+        }"><code class="language-${
+          language || "text"
+        }">${code}</code></pre></div>`;
+      };
+
+      // Apply syntax highlighting to inline code
+      renderer.codespan = (code) => {
+        return `<code class="inline-code">${code}</code>`;
+      };
+
+      const options = {
+        renderer,
+        highlight: function (code, lang) {
+          return code; // We'll rely on CSS for styling
+        },
+        breaks: true,
+        gfm: true,
+      };
+
+      const html = marked.parse(content, options);
       return DOMPurify.sanitize(html);
     },
     formatTime(seconds) {
@@ -746,7 +1010,8 @@ export default {
       return `${minutes}min ${remainingSeconds}s`;
     },
     copyToClipboard(text) {
-      if (!text) return;
+      if (!this.chatId) return;
+
       navigator.clipboard
         .writeText(text)
         .then(() => {
@@ -830,8 +1095,10 @@ export default {
 </script>
 
 <style scoped>
+/* Improved scrollbars */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -839,14 +1106,110 @@ export default {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
 }
 
-.dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.1);
+/* Code block styling */
+:deep(.code-block-wrapper) {
+  position: relative;
+  overflow-x: auto;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 0.5rem;
+  margin: 1rem 0;
 }
 
+:deep(pre) {
+  padding: 1rem;
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.2) !important;
+  font-family: "JetBrains Mono", Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  tab-size: 2;
+  -moz-tab-size: 2;
+}
+
+:deep(pre code) {
+  font-family: inherit;
+  padding: 0;
+  background: transparent !important;
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+:deep(.inline-code) {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.3rem;
+  font-family: "JetBrains Mono", Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 0.85em;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Text content styling */
+:deep(p) {
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+:deep(ul),
+:deep(ol) {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+:deep(li) {
+  margin-bottom: 0.5rem;
+}
+
+:deep(a) {
+  color: #0ea5e9;
+  text-decoration: none;
+  border-bottom: 1px dotted currentColor;
+}
+
+:deep(a:hover) {
+  border-bottom: 1px solid currentColor;
+}
+
+:deep(blockquote) {
+  border-left: 4px solid rgba(255, 255, 255, 0.2);
+  padding-left: 1rem;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 1rem 0;
+}
+
+:deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  overflow-x: auto;
+  display: block;
+}
+
+:deep(th),
+:deep(td) {
+  padding: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: left;
+}
+
+:deep(th) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+:deep(tr:nth-child(even)) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Animation styles */
 .typing-animation {
   display: inline-flex;
   align-items: center;

@@ -156,15 +156,15 @@ def generate_article(context: str, tool_call_id: Annotated[str, InjectedToolCall
             - Include relevant statistics, research findings, or benchmark data
 
             ## Short codes for various content options in markdown
+            - For mathematical expressions, simply use katex tag before expression like this in markdown: {{{{< katex >}}}} \(f(a,b,c) = (a^2+b^2+c^2)^3\)
             - For Youtube video use {{{{< youtubeLite id="SgXhGb-7QbU" label="Blowfish-tools demo" params="controls=0&start=10&end=30&modestbranding=2&rel=0&enablejsapi=1"  >}}}}
             - For displaying a tweet use {{{{< x user="SanDiegoZoo" id="1453110110599868418" >}}}}
             - For displaying a badge use {{{{</* /badge */>}}}}
             - For displaying a button use {{{{</* button href="#button" target="_self" */>}}}}
-            - For displaying a chart use {{{{< chart >}}}} type: 'bar', data: {{ labels: ['Tomato', 'Blueberry', 'Banana', 'Lime', 'Orange'], datasets: [{{ label: '# of votes', data: [12, 19, 3, 5, 3], }}] }} {{{{< /chart >}}}}   
+            - For displaying a chart use chart tag like this in markdown: {{{{< chart >}}}} type: 'bar', data: {{ labels: ['Tomato', 'Blueberry', 'Banana', 'Lime', 'Orange'], datasets: [{{ label: '# of votes', data: [12, 19, 3, 5, 3], }}] }} {{{{< /chart >}}}}   
             - For importing code from other sources like github gist use {{{{</* codeimporter url="rawpublicaccessiblefileurl" type="toml" startLine="11" endLine="18" */>}}}}
-            - For using github link, use this github card {{{{</* github repo="nunocoracao/blowfish" */>}}}}
-            - For math expressions, use katex language like this example: {{{{< katex >}}}} \(f(a,b,c) = (a^2+b^2+c^2)^3\)
-            - For using mermaid diagrams use {{{{< mermaid >}} graph LR; A[Lemons]-->B[Lemonade]; B-->C[Profit] {{< /mermaid >}}}}
+            - For using github link, use this github tag like this in markdown: {{{{</* github repo="nunocoracao/blowfish" */>}}}}
+            - For using mermaid diagrams, simply use mermaid tag before expression like this in markdown {{{{< mermaid >}} graph LR; A[Lemons]-->B[Lemonade]; B-->C[Profit] {{< /mermaid >}}}}
 
 
             ## Metadata
@@ -198,13 +198,17 @@ def generate_article(context: str, tool_call_id: Annotated[str, InjectedToolCall
     if response.get('content'):
         articleLink = publish_article(CONTENT_DIR, response)
         response['link'] = articleLink
+    if response.get('link'):
+        message = f"Your article has been published at {response.get('link')}"
+    else:
+        message = f"Your article has been published at {response.get('content')}"
 
     return Command(
         update={
             "article": response,
             "messages": [
                 ToolMessage(
-                    f"Here's your generated article \n\n{response.get('content')}", tool_call_id=tool_call_id
+                    message, tool_call_id=tool_call_id
                 )
             ],
         }

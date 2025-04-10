@@ -170,7 +170,7 @@ def sanitize_text(title: str) -> str:
 
 
 def format_list(items):
-    return "\n  " + "\n  ".join(f'"{item}"' for item in items) + "\n"
+    return "\n- " + "\n- ".join([f'"{item}"' for item in items]) + "\n"
 
 
 @error_handler
@@ -205,15 +205,16 @@ date: "{datetime.now().strftime("%Y-%m-%d")}"
 lastmod: "{datetime.now().strftime("%Y-%m-%d")}"
 description: "{sanitize_text(article_data.get('description', ''))}"
 summary: "{sanitize_text(article_data['summary'])}"
-keywords: [{format_list(article_data.get('keywords', []))}]
-tags: [{format_list(article_data.get('tags', []))}]
-categories: [{format_list(article_data.get('categories', []))}]
+keywords: {format_list(article_data.get('keywords', []))}
+tags: {format_list(article_data.get('tags', []))}
+categories: {format_list(article_data.get('categories', []))}
 ---
 """.strip()
 
             f.write(front_matter + "\n\n" + article_data['content'])
-        print(f"Article published successfully at {file_path}")
-        return f"https://blog.sleebit.com/posts/{article_data['slug'].lower()}"
+        article_link = f"https://blog.sleebit.com/posts/{article_data['slug'].lower()}"
+        print(f"Article published successfully at {article_link}")
+        return article_link
     except Exception as e:
         print(f"Error publishing article: {e}")
         return None

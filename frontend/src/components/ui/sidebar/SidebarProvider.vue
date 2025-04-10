@@ -11,6 +11,9 @@ import {
   SIDEBAR_WIDTH,
   SIDEBAR_WIDTH_ICON,
 } from "./utils";
+import { useStore } from "vuex";
+
+const store = useStore();
 
 const props = defineProps({
   defaultOpen: { type: Boolean, required: false, default: true },
@@ -43,9 +46,10 @@ function setOpenMobile(value) {
 function toggleSidebar() {
   if (isMobile.value) {
     setOpenMobile(!openMobile.value);
+    store.commit("SET_SIDEBAR_OPEN", !open.value);
   } else {
     // setOpen(!open.value);
-    this.$store.commit("SET_SIDEBAR_OPEN", !open.value);
+    store.commit("SET_SIDEBAR_OPEN", !open.value);
   }
 }
 

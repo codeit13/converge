@@ -14,6 +14,25 @@ const createEventSourceWithAuth = (url, token) => {
 };
 
 export default {
+  // Create a new chat session
+  async createChat({ state }, payload) {
+    try {
+      // If payload is provided, use the user_id from it, otherwise get from state
+      const userId = payload?.user_id || state.auth?.user?._id;
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+      console.log('Creating chat with user_id:', userId);
+      const response = await axios.post(`${BACKEND_URL}/api/chats`, {
+        user_id: userId
+      });
+      return { data: response.data };
+    } catch (error) {
+      console.error('Error creating chat:', error);
+      throw error;
+    }
+  },
+
   // Run an agent
   async runAgent({ state, commit }, userMessage) {
     try {
@@ -26,6 +45,7 @@ export default {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${state.JWT_TOKEN}`,
+            "user-id": state?.auth?.user?._id,
           },
         }
       );
@@ -45,7 +65,7 @@ export default {
   // Stream agent responses
   streamAgent(
     { state, commit },
-    { userPrompt, onMessage, onError, onComplete }
+    { userPrompt, chatId = null, onMessage, onError, onComplete }
   ) {
     try {
       // Create a fetch request with proper headers for streaming
@@ -57,7 +77,7 @@ export default {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "user-id": state?.auth?.user?._id,
+          "user-id": state?.auth?.user?._id || "", // Ensure it's never undefined
           Accept: "text/event-stream",
         },
         body: JSON.stringify({ prompt: userPrompt }),
@@ -155,8 +175,29 @@ export default {
 
   async getHistory({ state, commit }, agentId) {
     try {
-      const response = await axios.get(
-        `${BACKEND_URL}/api/history/${agentId}`,
+      const { data } = await axios.get(`${BACKEND_URL}/api/history`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${state.JWT_TOKEN}`,
+        },
+      });
+      commit("SET_AVAILABLE_TOOLS", data);
+    } catch (error) {
+      console.log(error);
+
+      commit("SET_TOASTER_DATA", {
+        type: "error",
+        message: "Error",
+        description:
+          error?.response?.data?.detail[0]?.msg || "Failed to run agent.",
+      });
+    }
+  },
+
+  async getAvailableTools({ state, commit }) {
+    try {
+      const { data } = await axios.get(
+        `${BACKEND_URL}/api/get-available-tools`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -164,9 +205,126 @@ export default {
           },
         }
       );
-      return response;
+      commit("SET_HISTORY", data);
     } catch (error) {
-      // You can add additional error handling here
+      console.log(error);
+
+      commit("SET_TOASTER_DATA", {
+        type: "error",
+        message: "Error",
+        description:
+          error?.response?.data?.detail[0]?.msg || "Failed to get tools.",
+      });
+    }
+  },
+
+  // Get all chat sessions for the current user
+  async getChatSessions({ state, commit }) {
+    try {
+      const response = await axios.get(`${BACKEND_URL}/api/chats`, {
+        headers: {
+          "Content-Type": "application/json",
+          "user-id": state?.auth?.user?._id,
+        },
+      });
+      commit("SET_CHAT_SESSIONS", response.data);
+      return response.data;
+    } catch (error) {
+      console.log(error);
+      commit("SET_TOASTER_DATA", {
+        type: "error",
+        message: "Error",
+        description:
+          error?.response?.data?.detail || "Failed to load chat sessions.",
+      });
+    }
+  },
+
+  // Get messages for a specific chat session
+  async getChatMessages({ state, commit }, chatId) {
+    try {
+      const response = await axios.get(`${BACKEND_URL}/api/chats/${chatId}`, {
+        headers: {
+          "Content-Type": "application/json",
+          "user-id": state?.auth?.user?._id,
+        },
+      });
+      commit("SET_CURRENT_CHAT_MESSAGES", response.data);
+      return response.data;
+    } catch (error) {
+      console.log(error);
+      commit("SET_TOASTER_DATA", {
+        type: "error",
+        message: "Error",
+        description:
+          error?.response?.data?.detail || "Failed to load chat messages.",
+      });
+    }
+  },
+
+  // Delete a chat session
+  async deleteChat({ state, commit }, chatId) {
+    try {
+      await axios.delete(`${BACKEND_URL}/api/chats/${chatId}`, {
+        headers: {
+          "Content-Type": "application/json",
+          "user-id": state?.auth?.user?._id,
+        },
+      });
+      // Remove the chat from the local state
+      commit("REMOVE_CHAT_SESSION", chatId);
+      commit("SET_TOASTER_DATA", {
+        type: "success",
+        message: "Success",
+        description: "Chat deleted successfully.",
+      });
+    } catch (error) {
+      console.log(error);
+      commit("SET_TOASTER_DATA", {
+        type: "error",
+        message: "Error",
+        description: error?.response?.data?.detail || "Failed to delete chat.",
+      });
+    }
+  },
+
+  // Analytics actions
+  async getAnalyticsSummary({ state, commit }) {
+    try {
+      const response = await axios.get(
+        `${BACKEND_URL}/api/analytics/summary`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${state.JWT_TOKEN}`,
+            "user-id": state?.auth?.user?._id,
+          },
+        }
+      );
+      commit("SET_ANALYTICS_SUMMARY", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching analytics summary:", error);
+      throw error;
+    }
+  },
+
+  async getChatDistribution({ state, commit }) {
+    try {
+      const response = await axios.get(
+        `${BACKEND_URL}/api/analytics/chat-distribution`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${state.JWT_TOKEN}`,
+            "user-id": state?.auth?.user?._id,
+          },
+        }
+      );
+      commit("SET_CHAT_DISTRIBUTION", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching chat distribution:", error);
       throw error;
     }
   },
