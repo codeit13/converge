@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import requests
 from typing import Annotated, Dict
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import InjectedToolCallId, tool
@@ -212,4 +213,14 @@ def generate_article(context: str, tool_call_id: Annotated[str, InjectedToolCall
         }
     )
 
-    # return {"article": response}
+
+@tool
+@error_handler
+def get_amazon_product_urls(query: str):
+    payload = {'api_key': settings.SCRAPER_API_KEY,
+               'query': query}
+    response = requests.get(
+        'https://api.scraperapi.com/structured/amazon/search', params=payload)
+
+    response = response.text
+    return response

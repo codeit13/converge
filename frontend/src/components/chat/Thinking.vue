@@ -1,5 +1,9 @@
 <template>
-  <Accordion :collapsible="true" class="border-0">
+  <Accordion
+    :collapsible="true"
+    class="border-0"
+    :default-value="`thinking-${messageId || index}`"
+  >
     <AccordionItem :value="`thinking-${messageId || index}`" class="border-0">
       <AccordionTrigger
         class="flex items-center gap-2 px-3 py-1.5 transition-colors rounded-lg hover:bg-secondary/5 no-underline"

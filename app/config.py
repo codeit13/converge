@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     TWITTER_EMAIL: str
     TWITTER_PASSWORD: str
     TWITTER_USER_AGENT: str
+    SCRAPER_API_KEY: str
 
     class Config:
         env_file = ".env"
