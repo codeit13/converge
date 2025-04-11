@@ -203,7 +203,7 @@ def generate_article(context: str, tool_call_id: Annotated[str, InjectedToolCall
 
     return Command(
         update={
-            "article": response,
+            "articles": [response],
             "messages": [
                 ToolMessage(
                     message, tool_call_id=tool_call_id

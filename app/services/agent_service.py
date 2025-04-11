@@ -5,6 +5,7 @@ from typing import Annotated, Any, AsyncGenerator, Dict, List, Optional
 from uuid import uuid4
 from langchain_core.messages import AnyMessage, AIMessage, HumanMessage
 from langgraph.graph.message import add_messages
+from operator import add
 from langchain_openai import ChatOpenAI
 from langchain_community.tools import BraveSearch
 from langchain_tavily import TavilySearch
@@ -33,9 +34,13 @@ COLORS = {
 }
 
 
+def merge_lists(a: List[dict], b: List[dict]) -> List[dict]: return [
+    elem for pair in zip(a, b) for elem in pair]
+
+
 class State(AgentState):
     messages: Annotated[List[AnyMessage], add_messages]
-    article: dict[str, Any]
+    articles: Annotated[List[dict[str, Any]], merge_lists]
 
 
 class AgentService:
@@ -125,7 +130,8 @@ class AgentService:
 
             ## Article Generation Guidelines (When Requested)
             - Don't provide exact article or it's summary, if a tool has already provided the same info, you can restructure the info provided by the tool.
-            - If tool gave article link, return to use in markdown, that your article has been generated and published at {{article_link}}.
+            - If tool gave article link, return to use in markdown, that your article has been generated tell the user that his article has been published at {{article_link}}.
+            - Always return article link at the end of your response, also beautify the article link text in markdown.
 
             ** Metadata **
             Current Date: {datetime.now().strftime("%Y-%m-%d")}
@@ -191,7 +197,7 @@ class AgentService:
 
             # Prepare initial state and inputs
             # Clearing previously generated article in agent state, if any
-            state_values = {"article": {}}
+            state_values = {}
             inputs = {"messages": [("user", message.content)]}
 
             # Stream responses

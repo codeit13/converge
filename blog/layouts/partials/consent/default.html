@@ -1,0 +1,74 @@
+<!-- layouts/partials/consent/default.html -->
+
+<!-- 1. Initialize Google Consent Mode -->
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  // Default state: Denied until the user provides consent
+  gtag('consent', 'default', {
+    'ad_storage': 'denied',
+    'analytics_storage': 'denied'
+  });
+</script>
+
+<!-- 2. Consent Banner HTML and Inline Styles -->
+<div id="consent-banner" style="
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #000;
+  color: #fff;
+  padding: 15px;
+  text-align: center;
+  display: none;
+  z-index: 9999;">
+  <span>This website uses cookies to ensure you get the best experience on our website.</span>
+  <button id="accept-consent" style="
+    margin-left: 10px;
+    padding: 5px 10px;
+    cursor: pointer;">
+    Got it!
+  </button>
+</div>
+
+<!-- 3. Consent Handling Script -->
+<script>
+  // Helper functions to get and set consent in localStorage
+  function hasConsented() {
+    return localStorage.getItem('userConsent') === 'true';
+  }
+
+  function setConsent(consent) {
+    localStorage.setItem('userConsent', consent);
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    var banner = document.getElementById('consent-banner');
+
+    // Show banner if consent has not been given
+    if (!hasConsented()) {
+      banner.style.display = 'block';
+    } else {
+      // Already consented; update Google Consent Mode
+      gtag('consent', 'update', {
+        'ad_storage': 'granted',
+        'analytics_storage': 'granted'
+      });
+    }
+
+    // Add click handler for the "Got it!" button
+    document.getElementById('accept-consent').addEventListener('click', function() {
+      setConsent('true');
+      banner.style.display = 'none';
+      // Update consent mode after acceptance
+      gtag('consent', 'update', {
+        'ad_storage': 'granted',
+        'analytics_storage': 'granted'
+      });
+    });
+  });
+</script>
+
+<!-- 4. Google AdSense Script -->
+<script data-ad-client="YOUR_ADSENSE_CLIENT_ID" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>

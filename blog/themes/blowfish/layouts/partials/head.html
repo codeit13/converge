@@ -123,6 +123,7 @@
   {{/* Analytics */}}
   {{ partial "analytics/main.html" .Site }}
   {{/* Extend head - eg. for custom analytics scripts, etc. */}}
+  {{ partial "consent/default.html" .Site }}
   {{ if templates.Exists "partials/extend-head.html" }}
   {{ partialCached "extend-head.html" .Site }}
   {{ end }}

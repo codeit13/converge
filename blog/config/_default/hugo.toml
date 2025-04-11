@@ -68,7 +68,7 @@ googleAnalytics = "G-WVXW8DQXW5"
 
 [services]
   [services.disqus]
-    shortname = 'blogs.sleebit'
+    shortname = 'blog.sleebit'
 
 [privacy]
   [privacy.x]

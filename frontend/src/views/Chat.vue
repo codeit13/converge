@@ -5,7 +5,7 @@
       fontFamily: `'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif`,
     }"
   >
-    <GoogleLogin :callback="oneTapGoogleLoginCallback" prompt>
+    <GoogleLogin :callback="oneTapGoogleLoginCallback" prompt v-if="!user?._id">
       <span></span>
     </GoogleLogin>
     <!-- Overlay for mobile when sidebar is open -->
@@ -130,7 +130,7 @@
 
             <!-- Example prompts that auto-send when clicked -->
             <div
-              class="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto mt-6 px-4"
+              class="grid grid-cols-1 md:grid-cols-2 gap-2 max-w-2xl mx-auto md:mt-14 px-4"
             >
               <Button
                 v-for="(prompt, index) in examplePrompts"
@@ -140,12 +140,12 @@
                 @click="sendExamplePrompt(prompt)"
               >
                 <div>
-                  <p class="font-medium text-primary mb-1 flex items-center">
+                  <p class="font-medium text-primary flex items-center !mb-2">
                     <SparklesIcon class="h-3 w-3 mr-2 text-primary/70" />
                     {{ prompt.title }}
                   </p>
                   <p
-                    class="text-muted-foreground text-xs line-clamp-2 group-hover:text-foreground/90 transition-colors whitespace-normal"
+                    class="text-muted-foreground text-xs line-clamp-2 group-hover:text-foreground/90 transition-colors whitespace-normal !mb-2"
                   >
                     {{ prompt.text }}
                   </p>
@@ -202,135 +202,18 @@
               </AvatarFallback>
             </Avatar>
             <div class="flex flex-col w-full">
-              <!-- Thinking section - collapsible -->
+              <!-- Thinking section using the Thinking component -->
               <div
                 v-if="message.thinking && message.thinking.length > 0"
                 class="w-full h-fit"
               >
-                <div
-                  class="flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors rounded-lg hover:bg-secondary/5"
-                  @click="toggleThinking(message)"
-                >
-                  <span class="text-sm font-medium text-muted-foreground/70">
-                    {{
-                      message?.thinkingTime
-                        ? "Thought for"
-                        : "Reasoning & Tools"
-                    }}
-                    <span
-                      v-if="message.thinkingTime"
-                      class="ml-0.5 font-medium text-muted-foreground/80"
-                    >
-                      {{ formatTime(message.thinkingTime) }}
-                    </span>
-                  </span>
-                  <ChevronDown
-                    class="h-3.5 w-3.5 ml-auto transition-transform text-muted-foreground"
-                    :class="{ 'rotate-180': message.showThinking }"
-                  />
-                </div>
-                <div
-                  class="relative rounded-lg px-3 py-0 mt-2 text-sm bg-background/5 transition-all duration-2000"
-                  :class="{
-                    'h-0 overflow-hidden': !message.showThinking,
-                  }"
-                >
-                  <div
-                    class="bg-primary/10 absolute top-1 left-0 w-1 h-full rounded-full"
-                  ></div>
-                  <div
-                    v-for="(step, i) in message.thinking"
-                    :key="`thinking-${i}`"
-                    class="mb-1 ml-2"
-                  >
-                    <div class="flex items-center gap-2">
-                      <!-- <div class="rounded-full p-1 bg-primary/5">
-                        <Lightbulb class="h-3 w-3 text-muted-foreground" />
-                      </div> -->
-                      <div class="font-medium text-sm break-words">
-                        <span v-if="step.type === 'thinking'">
-                          {{ step.data }}
-                        </span>
-                        <span
-                          v-else-if="step.type === 'tool_calls'"
-                          class="text-secondary"
-                        >
-                          Calling
-                          {{
-                            step.data
-                              .map((tool) =>
-                                tool
-                                  .replace(/_/g, " ")
-                                  .replace(/(^|\s)\S/g, (l) => l.toUpperCase())
-                              )
-                              .join(", ")
-                          }}
-                          {{
-                            (step?.data || []).length == 1 ? "tool " : "tools: "
-                          }}
-                        </span>
-
-                        <div
-                          v-else-if="step.type === 'tool_messages'"
-                          class="text-sm font-medium text-muted-foreground break-words text-wrap"
-                        >
-                          <span v-html="step.data"></span>
-                        </div>
-
-                        <!-- Format JSON content nicely -->
-                        <div
-                          v-if="
-                            step.data &&
-                            typeof step.data === 'object' &&
-                            !['tool_calls', 'tool_messages'].includes(step.type)
-                          "
-                          class="space-y-2 px-4 py-2 mb-2 border border-muted/50 rounded-md"
-                        >
-                          <div
-                            v-for="(value, key) in step.data"
-                            :key="key"
-                            class="flex items-start gap-2"
-                          >
-                            <span
-                              class="font-medium text-sm text-muted-foreground capitalize"
-                            >
-                              {{
-                                typeof key === "number"
-                                  ? key + 1
-                                  : Number.isNaN(parseInt(key))
-                                  ? key
-                                  : parseInt(key) + 1
-                              }}:
-                            </span>
-                            <div class="flex-1">
-                              <!-- Handle different types of values -->
-                              <div
-                                v-if="
-                                  typeof value === 'object' && value !== null
-                                "
-                              >
-                                <ul class="list-disc list-inside space-y-1">
-                                  <li
-                                    v-for="(item, idx) in Array.isArray(value)
-                                      ? value
-                                      : Object.values(value)"
-                                    :key="idx"
-                                    class="text-sm text-muted-foreground"
-                                  >
-                                    {{ item }}
-                                  </li>
-                                </ul>
-                              </div>
-                              <div v-else class="text-sm text-muted-foreground">
-                                {{ value }}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <Thinking
+                  :thinking="message.thinking"
+                  :message-id="message.id"
+                  :index="index"
+                  :thinking-time="message.thinkingTime"
+                  :available-tools="availableTools"
+                />
               </div>
 
               <!-- Message content -->
@@ -552,6 +435,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import Input from "@/components/ui/input/Input.vue";
 import Textarea from "@/components/ui/textarea/Textarea.vue";
+import Thinking from "@/components/chat/Thinking.vue";
 import {
   Bot,
   ChevronDown,
@@ -618,6 +502,7 @@ export default {
   },
   computed: {
     ...mapState(["availableTools"]),
+    ...mapState("auth", ["user"]),
     latestAiMessage() {
       const aiMessages = this.messages.filter(
         (message) => message.role === "assistant"
@@ -641,12 +526,6 @@ export default {
         // this.scrollToBottom();
       },
     },
-    propName: {
-      immediate: true,
-      handler(newVal, oldVal) {
-        // Handle prop changes
-      },
-    },
   },
   async mounted() {
     this.$store.dispatch("getAvailableTools");
@@ -666,14 +545,16 @@ export default {
     //   this.$refs.messageInput.focus();
     // }
 
-    // Initialize Google One Tap if enabled
-    if (this.isOneTapPromptEnabled && !this.$store.state.auth.user) {
-      window.google?.accounts.id.initialize({
-        client_id: process.env.VUE_APP_GOOGLE_CLIENT_ID,
-        callback: this.oneTapGoogleLoginCallback,
-      });
-      window.google?.accounts.id.prompt();
-    }
+    setTimeout(() => {
+      // Initialize Google One Tap if enabled
+      if (this.isOneTapPromptEnabled && !this.user?._id) {
+        window.google?.accounts.id.initialize({
+          client_id: process.env.VUE_APP_GOOGLE_CLIENT_ID,
+          callback: this.oneTapGoogleLoginCallback,
+        });
+        window.google?.accounts.id.prompt();
+      }
+    }, 1000);
 
     // Scroll to bottom
     this.scrollToBottom();
@@ -939,14 +820,24 @@ ${error}`;
         }
         this.scrollToBottom();
       } else if (data.type === "complete") {
-        const article = data?.data?.article;
-        let messageStr = !this.messages[this.messages.length - 1].content || "";
-        if (!messageStr.includes(article?.link)) {
-          if (article && article?.link) {
-            this.messages[this.messages.length - 1].content += `
+        const articles = data?.data?.articles || [];
+        let lastMessage = this.messages[this.messages.length - 1];
 
-Article is now live at ${article.link}`;
-          }
+        // Ensure content is a string
+        lastMessage.content = lastMessage.content || "";
+
+        // Filter out articles whose links are already in the message
+        const newArticles = articles.filter(
+          (article) =>
+            article?.link && !lastMessage.content.includes(article.link)
+        );
+
+        if (newArticles.length > 0) {
+          // Build a string with the header and the links, each on a new line
+          const linksList = newArticles
+            .map((article) => article.link)
+            .join("\n\n");
+          lastMessage.content += `\n\nHere are some variations for the articles you can check out\n\n${linksList}`;
         }
       } else if (data.type === "error") {
         this.messages[
@@ -1075,7 +966,7 @@ ${error}`;
     },
     formatTime(seconds) {
       if (seconds < 60) {
-        return `${seconds}s`;
+        return `${parseInt(seconds)}s`;
       }
       if (seconds < 3600) {
         const minutes = Math.floor(seconds / 60);
