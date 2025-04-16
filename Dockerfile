@@ -1,47 +1,32 @@
-FROM python:3.11-slim
+FROM nikolaik/python-nodejs:python3.11-nodejs20
 
 # Set an initial working directory for installation steps
-WORKDIR /app
+WORKDIR /converge
 
 # Optionally, set PYTHONPATH to include the directory containing your app code.
-# Here, we add /app/app so that imports inside main.py work correctly.
-ENV PYTHONPATH=/app/app
+# Here, we add /converge/app so that imports inside main.py work correctly.
+ENV PYTHONPATH=/converge/app
 
 # Install required system packages
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl wget ffmpeg yt-dlp ca-certificates gnupg && \
     rm -rf /var/lib/apt/lists/*
 
-# Install NVM and Node.js v20 (LTS)
-ENV NVM_DIR=/root/.nvm
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash \
-    && . "$NVM_DIR/nvm.sh" \
-    && nvm install 20 \
-    && nvm use 20 \
-    && nvm alias default 20 \
-    && ln -sf "$NVM_DIR/versions/node/v20.*/bin/node" /usr/local/bin/node \
-    && ln -sf "$NVM_DIR/versions/node/v20.*/bin/npm" /usr/local/bin/npm \
-    && ln -sf "$NVM_DIR/versions/node/v20.*/bin/npx" /usr/local/bin/npx \
-    && node -v && npm -v && npx -v
-ENV PATH=$NVM_DIR/versions/node/v20.*/bin/:$PATH
+# Copy MCP servers first
+COPY app/mcp-servers /converge/app/mcp-servers
 
 # Build all MCP servers (add more as needed)
-WORKDIR /app/app/mcp-servers
-RUN for d in youtube sequential; do \
-    cd /app/app/mcp-servers/$d && npm install && npm run build; \
-  done
+WORKDIR /converge/app/mcp-servers
+RUN echo "Listing contents of /converge/app/mcp-servers:" && ls -l /converge/app/mcp-servers && \
+    for d in youtube sequential; do \
+    echo "Building $d"; \
+    cd /converge/app/mcp-servers/$d && yarn install && yarn run build; \
+    done
 
-# Set working directory for FastAPI app
-WORKDIR /app/app
-
-# Copy and install Python dependencies from the app directory
-WORKDIR /app
-COPY app/requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Set fixed Node.js version and install nvm, Node.js, and Yarn
-# ENV NODE_VERSION=22.3.0
-# ENV NVM_DIR=/root/.nvm
+# Copy the rest of your app
+WORKDIR /converge
+COPY app/requirements.txt /converge/app/requirements.txt
+RUN pip install --no-cache-dir -r /converge/app/requirements.txt
 # RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash && \
 #     . "$NVM_DIR/nvm.sh" && \
 #     nvm install $NODE_VERSION && \

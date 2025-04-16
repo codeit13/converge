@@ -178,7 +178,18 @@ def publish_article(CONTENT_DIR, res: dict):
     """
     Publish the article extracted from the agent output.
     This method writes the article to a Markdown file in the content directory.
+    
+    The content directory is mapped to /converge/blog/content inside the Docker container.
+    If CONTENT_DIR is not absolute, it is resolved relative to /converge/blog/content.
     """
+    # Inside Docker, /converge/blog/content is the canonical content directory
+    base_content_dir = '/converge/blog/content'
+    if not os.path.isabs(CONTENT_DIR):
+        CONTENT_DIR = os.path.join(base_content_dir, CONTENT_DIR)
+    else:
+        # If absolute, ensure it is under /converge/blog/content
+        if not CONTENT_DIR.startswith(base_content_dir):
+            CONTENT_DIR = base_content_dir
     # Ensure the content directory exists
     if not os.path.exists(CONTENT_DIR):
         os.makedirs(CONTENT_DIR)

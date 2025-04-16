@@ -6,7 +6,7 @@ services:
     ports:
       - "8001:8001"
     volumes:
-      - ./blog/content:/app/blog/content  # Sync MD files
+      - ./:/converge  # Mount the whole repo for live code sync
       - /var/run/docker.sock:/var/run/docker.sock  # Allows FastAPI to trigger docker commands
     networks:
       - converge-network

@@ -58,7 +58,8 @@ class AgentService:
             api_key=settings.OPENAI_API_KEY, model="gpt-4o-mini", temperature=0.7, streaming=True)
 
         # Always resolve MCP server paths relative to this file to work in both local and Docker environments
-        MCP_SERVERS_BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), '../mcp-servers'))
+        # Updated for new Docker WORKDIR: /converge
+        MCP_SERVERS_BASE = '/converge/app/mcp-servers'
 
         mcp_config = {
             "youtube": {
