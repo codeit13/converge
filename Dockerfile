@@ -21,10 +21,21 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | b
     && nvm alias default 20 \
     && ln -sf "$NVM_DIR/versions/node/v20.*/bin/node" /usr/local/bin/node \
     && ln -sf "$NVM_DIR/versions/node/v20.*/bin/npm" /usr/local/bin/npm \
-    && node -v && npm -v
+    && ln -sf "$NVM_DIR/versions/node/v20.*/bin/npx" /usr/local/bin/npx \
+    && node -v && npm -v && npx -v
 ENV PATH=$NVM_DIR/versions/node/v20.*/bin/:$PATH
 
+# Build all MCP servers (add more as needed)
+WORKDIR /app/mcp-servers
+RUN for d in youtube sequential; do \
+    cd /app/mcp-servers/$$d && npm install && npm run build; \
+  done
+
+# Set working directory for FastAPI app
+WORKDIR /app/app
+
 # Copy and install Python dependencies from the app directory
+WORKDIR /app
 COPY app/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 

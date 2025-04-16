@@ -1,0 +1,14 @@
+# Ignore node_modules and other unnecessary files for smaller, faster Docker builds
+node_modules
+.git
+__pycache__
+*.pyc
+.DS_Store
+.env
+.env.example
+*.log
+npm-debug.log
+yarn-error.log
+*.swp
+.idea
+.vscode
