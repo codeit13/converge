@@ -11,6 +11,7 @@ export default createStore({
   },
   state: {
     isLoading: false,
+    documents: [],
     TOASTER_DATA: null,
     isSidebarOpen: true,
     history: null,

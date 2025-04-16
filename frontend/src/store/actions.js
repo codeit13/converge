@@ -14,6 +14,52 @@ const createEventSourceWithAuth = (url, token) => {
 };
 
 export default {
+  // RAG: Add document
+  async ragAddDocument({ commit }, { sourceType, content, file }) {
+    try {
+      const formData = new FormData();
+      formData.append("source_type", sourceType);
+      if (content) formData.append("content", content);
+      if (file) formData.append("file", file);
+      const res = await axios.post(`${BACKEND_URL}/api/rag/documents`, formData);
+      return res.data;
+    } catch (error) {
+      commit("SET_TOASTER_DATA", { type: "error", message: "Failed to add document." });
+      throw error;
+    }
+  },
+  // RAG: Get all documents
+  async ragGetDocuments({ commit }) {
+    try {
+      const res = await axios.get(`${BACKEND_URL}/api/rag/documents`);
+      commit("SET_RAG_DOCUMENTS", res.data.documents);
+      return res.data.documents;
+    } catch (error) {
+      commit("SET_TOASTER_DATA", { type: "error", message: "Failed to fetch documents." });
+      throw error;
+    }
+  },
+  // RAG: Delete document
+  async ragDeleteDocument({ commit }, docId) {
+    try {
+      await axios.delete(`${BACKEND_URL}/api/rag/documents/${docId}`);
+      commit("SET_TOASTER_DATA", { type: "success", message: "Document deleted." });
+    } catch (error) {
+      commit("SET_TOASTER_DATA", { type: "error", message: "Failed to delete document." });
+      throw error;
+    }
+  },
+  // RAG: Search documents
+  async ragSearchDocuments({ commit }, { query, k = 5 }) {
+    try {
+      const res = await axios.post(`${BACKEND_URL}/api/rag/search`, { query, k });
+      return res.data.results;
+    } catch (error) {
+      commit("SET_TOASTER_DATA", { type: "error", message: "Search failed." });
+      throw error;
+    }
+  },
+
   // Create a new chat session
   async createChat({ state }, payload) {
     try {

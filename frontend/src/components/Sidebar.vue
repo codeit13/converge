@@ -43,7 +43,7 @@
 
     <SidebarInset>
       <header
-        class="dark:bg-dark-600 bg-light-100 dark:bg-glossy-dark dark:backdrop-blur-md bg-glossy-light backdrop-blur-md flex h-16 shrink-0 items-center gap-2 sticky top-0"
+        class="dark:bg-dark-600 bg-light-100 dark:bg-glossy-dark dark:backdrop-blur-md bg-glossy-light backdrop-blur-md flex h-16 shrink-0 items-center gap-2 sticky top-0 z-[9999]"
       >
         <div class="flex w-full items-center gap-2 px-4">
           <!-- @click="updateSidebarOpen(!isSidebarOpen)" -->
@@ -226,6 +226,11 @@ export default {
           //     url: "/dashboard/settings",
           //   },
           // ],
+        },
+        {
+          title: "Knowledge Base (RAG)",
+          url: "/rag",
+          icon: BookOpen,
         },
       ],
     };

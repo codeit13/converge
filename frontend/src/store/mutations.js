@@ -1,4 +1,7 @@
 export default {
+  SET_RAG_DOCUMENTS(state, docs) {
+    state.documents = docs;
+  },
   SET_IS_LOADING(state, payload) {
     state.isLoading = payload;
   },

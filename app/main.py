@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
-from api.endpoints import agent_router, analytics_router
+from api.endpoints import agent_router, analytics_router, rag_router
 from services.agent_service import AgentService
 from config import settings
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -45,6 +45,7 @@ app.add_middleware(
 
 app.include_router(agent_router, prefix="/api")
 app.include_router(analytics_router, prefix="/api/analytics")
+app.include_router(rag_router, prefix="/api/rag")
 
 
 def handle_shutdown_signal(signal, frame):

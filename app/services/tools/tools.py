@@ -1,7 +1,7 @@
 from datetime import datetime
 import os
 import requests
-from typing import Annotated, Dict
+from typing import Annotated, Dict, Optional
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import InjectedToolCallId, tool
 from langchain_openai import ChatOpenAI
@@ -45,6 +45,16 @@ class ArticleFormat(BaseModel):
     )
 
 
+class ResponseFormat(BaseModel):
+    query_to_user: Optional[str] = Field(
+        None, description="If you have any query/ question for the user, ask it here"
+    )
+    article: Optional[ArticleFormat] = Field(
+        None,
+        description="The article details in the correct format. If you don't have enough context, simply through null there"
+    )
+
+
 @tool
 @error_handler
 def generate_article(context: str, tool_call_id: Annotated[str, InjectedToolCallId],) -> Dict:
@@ -59,116 +69,22 @@ def generate_article(context: str, tool_call_id: Annotated[str, InjectedToolCall
     """
     article_prompt = [
         ("system", f"""
-            You are an expert technical writer specializing in AI content with strong SEO optimization. Your task is to create an authoritative, insightful blog article that ranks well on search engines while delivering genuine technical value to a knowledgeable audience.
+            You are a highly skilled SEO-focused content creator with extensive experience in writing blog posts that not only rank well on search engines but also provide genuine value to readers. You have a strong understanding of technical subjects and can break down complex information into easily digestible formats while ensuring the content is structured properly in Markdown.
 
-            ## Article Structure Requirements
-            Create a well-structured markdown article with:
-            1. A compelling, specific title that includes the primary keyword (70-80 characters)
-            2. An executive summary/introduction (150-200 words) that hooks the reader and outlines what they'll learn
-            3. A well-structured content hierarchy using proper heading tags (H2, H3, H4)
-            4. Strategic keyword placement throughout the content
-            5. A strong conclusion with actionable takeaways
-            6. A related resources/further reading section
-            7. 5-7 relevant FAQs addressing common questions about the topic
-            8. Total word count between 1800-2500 words for comprehensive coverage
+Your task is to write an SEO-ready blog post based on the context that will be provided to you. The context will include essential details and technical content elements that can enhance the post's richness and clarity. Make sure to structure the blog post effectively in Markdown format, including headings, lists, code snippets, and any other relevant elements to improve readability and SEO performance.
 
-            ## Detailed Sectional Requirements
-            
-            ### Introduction Section
-            - Begin with a technical hook that demonstrates expertise and establishes relevance
-            - Clearly state the problem or challenge the article addresses
-            - Include a brief overview of what readers will learn
-            - End with a transition to the main content
-            
-            ### Main Content Sections
-            - Organize content into logical H2 sections with descriptive headings
-            - Further divide complex sections into H3 and H4 subsections
-            - Include prerequisites or background knowledge needed (if applicable)
-            - For implementation guides:
-              * Break down into clear, numbered steps
-              * Explain the purpose of each step
-              * Include code examples with comments
-              * Highlight potential issues or gotchas
-              * Provide verification steps to ensure correct implementation
-            
-            ### Practical Application Section
-            - Include real-world use cases and examples
-            - Discuss industry applications or business implications
-            - Provide benchmarks or performance expectations where relevant
-            
-            ### Limitations & Considerations Section
-            - Address technical limitations honestly
-            - Discuss ethical considerations or potential challenges
-            - Include alternative approaches where applicable
-            
-            ### Conclusion
-            - Summarize key points and insights
-            - Provide actionable next steps for readers
-            - End with a forward-looking statement about the technology
-            
-            ### FAQs Section
-            - Include 5-7 specific, detailed questions and answers
-            - Address common challenges, misconceptions, and advanced usage
-            - Incorporate additional keywords naturally in this section
-            
-            ### Further Reading Section
-            - Link to related resources, documentation, and research papers
-            - Suggest next topics to explore
+Here are the details you will need to consider while writing the blog post:
 
-            ## Technical Content Elements
-            - Use markdown tables for comparative analyses
-            - Include properly formatted code blocks with syntax highlighting (```language)
-            - Create bulleted or numbered lists for step-by-step explanations
-            - Emphasize key technical terms with bold or italic formatting
-            - Add internal linking opportunities to related technical concepts
-            - Use math formulas with proper LaTeX notation when needed
-            - Include callouts for important notes, warnings, or tips
-            - Use Hugo shortcodes for enhanced dynamic content:
-              * {{< highlight python >}}code{{< /highlight >}}
-              * {{< figure src="/images/diagram.png" title="Diagram Title" >}}
-              * {{< notice note >}}Important information{{< /notice >}}
-              * {{< tabs >}}{{< tab "Tab 1" >}}Content{{< /tab >}}{{< /tabs >}}
-
-            ## Diagrams and Visualizations
-            - Suggest appropriate diagrams or flowcharts that would enhance understanding
-            - Provide textual descriptions of what these diagrams should illustrate
-            - Include Mermaid or PlantUML markup for generating diagrams when appropriate
-            - It supports GoAT diagrams (ASCII) by using ```goat block 
-
-            ## SEO Optimization Rules
-            - Primary keyword in title, URL slug, first paragraph, and at least one H2
-            - Secondary keywords naturally distributed throughout the content (especially in H3s)
-            - Strategic internal linking suggestions to strengthen site architecture
-            - External authoritative linking to enhance credibility
-            - Meta description suggestion (150-160 characters) that includes primary keyword
-            - Image alt text recommendations that include relevant keywords
-
-            ## Quality Standards
-            - Ensure technical accuracy and up-to-date information
-            - Avoid jargon without explanation (unless targeting highly technical audience)
-            - Use consistent terminology throughout
-            - Provide sufficient context and background for complex concepts
-            - Balance theoretical explanations with practical applications
-            - Write in an authoritative but accessible voice
-            - Include relevant statistics, research findings, or benchmark data
-
-            ## Short codes for various content options in markdown
-            - For mathematical expressions, simply use katex tag before expression like this in markdown: {{{{< katex >}}}} \(f(a,b,c) = (a^2+b^2+c^2)^3\)
-            - For Youtube video use {{{{< youtubeLite id="SgXhGb-7QbU" label="Blowfish-tools demo" params="controls=0&start=10&end=30&modestbranding=2&rel=0&enablejsapi=1"  >}}}}
-            - For displaying a tweet use {{{{< x user="SanDiegoZoo" id="1453110110599868418" >}}}}
-            - For displaying a badge use {{{{</* /badge */>}}}}
-            - For displaying a button use {{{{</* button href="#button" target="_self" */>}}}}
-            - For displaying a chart use chart tag like this in markdown: {{{{< chart >}}}} type: 'bar', data: {{ labels: ['Tomato', 'Blueberry', 'Banana', 'Lime', 'Orange'], datasets: [{{ label: '# of votes', data: [12, 19, 3, 5, 3], }}] }} {{{{< /chart >}}}}   
-            - For importing code from other sources like github gist use {{{{</* codeimporter url="rawpublicaccessiblefileurl" type="toml" startLine="11" endLine="18" */>}}}}
-            - For using github link, use this github tag like this in markdown: {{{{</* github repo="nunocoracao/blowfish" */>}}}}
-            - For using mermaid diagrams, simply use mermaid tag before expression like this in markdown {{{{< mermaid >}} graph LR; A[Lemons]-->B[Lemonade]; B-->C[Profit] {{< /mermaid >}}}}
-
+Context: __________
+Target Keywords: __________
+Target Audience: __________
+Key Insights to Include: __________
+Any specific technical elements required (e.g., code snippets, tables, etc.): __________
+If you require any additional information or clarifications to create a comprehensive and valuable blog post, please ask the user for it.
 
             ## Metadata
             Current Date: {datetime.now().strftime("%Y-%m-%d")}
             Current Time: {datetime.now().strftime("%H:%M:%S")}
-            Target Audience: Technical professionals, AI enthusiasts, developers, data scientists
-            Content Type: Technical explanation of a concept, implementation guide of a topic, industry analysis, or emerging technology overview
         """
          )
     ]
@@ -176,47 +92,63 @@ def generate_article(context: str, tool_call_id: Annotated[str, InjectedToolCall
     llm = ChatOpenAI(
         api_key=settings.OPENAI_API_KEY, model="gpt-4o-mini", temperature=0.7)
 
-    llm = llm.with_structured_output(ArticleFormat)
+    llm = llm.with_structured_output(ResponseFormat)
 
     article_prompt.append(
         ("human", f"Generate an article for this context:\n{context}"))
-    response: ArticleFormat = llm.invoke(article_prompt)
+    response: ResponseFormat = llm.invoke(article_prompt)
 
     response = response.model_dump()
 
-    # Dir for storing blog markdown files (For Docker & Local)
-    CONTENT_DIR = "/app/blog/content"
-    if not os.path.exists(CONTENT_DIR):
-        CONTENT_DIR = os.path.join(
-            os.path.dirname(os.getcwd()), "blog", "content")
-
-    # print(f"Content directory: {CONTENT_DIR}")
-
-    if response.get('content'):
-        articleLink = publish_article(CONTENT_DIR, response)
-        response['link'] = articleLink
-
-    message = "Your article has been published"
-    if response.get('link', None):
-        message += f" at {response.get('link')}"
+    if response.get("message_to_user"):
+        return response.get("message_to_user")
     else:
-        message += f" with content {response.get('content', '')}"
+        # Dir for storing blog markdown files (For Docker & Local)
+        article = response.get('article')
+        if not article:
+            return "I'm sorry, I don't have enough context to generate an article."
 
-    return Command(
-        update={
-            "articles": [response],
-            "messages": [
-                ToolMessage(
-                    message, tool_call_id=tool_call_id
-                )
-            ],
-        }
-    )
+        CONTENT_DIR = "/app/blog/content"
+        if not os.path.exists(CONTENT_DIR):
+            CONTENT_DIR = os.path.join(
+                os.path.dirname(os.getcwd()), "blog", "content")
+
+        # print(f"Content directory: {CONTENT_DIR}")
+
+        if article.get('content'):
+            articleLink = publish_article(CONTENT_DIR, article)
+            article['link'] = articleLink
+
+        message = "Your article has been published"
+        if article.get('link', None):
+            message += f" at {article.get('link')}"
+        else:
+            message += f" with content {article.get('content', '')}"
+
+        return Command(
+            update={
+                "articles": [article],
+                "messages": [
+                    ToolMessage(
+                        message, tool_call_id=tool_call_id
+                    )
+                ],
+            }
+        )
 
 
 @tool
 @error_handler
 def get_amazon_product_urls(query: str):
+    """
+    Get Amazon product URLs based on the given query.
+
+    Args:
+        query: (str) The search query for Amazon products
+
+    Returns:
+        str: JSON string containing the product URLs
+    """
     payload = {'api_key': settings.SCRAPER_API_KEY,
                'query': query}
     response = requests.get(

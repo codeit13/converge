@@ -9,8 +9,20 @@ ENV PYTHONPATH=/app/app
 
 # Install required system packages
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl wget ffmpeg yt-dlp && \
+    apt-get install -y --no-install-recommends curl wget ffmpeg yt-dlp ca-certificates gnupg && \
     rm -rf /var/lib/apt/lists/*
+
+# Install NVM and Node.js v20 (LTS)
+ENV NVM_DIR=/root/.nvm
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash \
+    && . "$NVM_DIR/nvm.sh" \
+    && nvm install 20 \
+    && nvm use 20 \
+    && nvm alias default 20 \
+    && ln -sf "$NVM_DIR/versions/node/v20.*/bin/node" /usr/local/bin/node \
+    && ln -sf "$NVM_DIR/versions/node/v20.*/bin/npm" /usr/local/bin/npm \
+    && node -v && npm -v
+ENV PATH=$NVM_DIR/versions/node/v20.*/bin/:$PATH
 
 # Copy and install Python dependencies from the app directory
 COPY app/requirements.txt /app/requirements.txt

@@ -3,6 +3,12 @@ import store from "@/store";
 
 const routes = [
   {
+    path: "/rag",
+    name: "RAG",
+    component: () => import("@/views/Rag.vue"),
+    meta: { requiresAuth: false },
+  },
+  {
     path: "/",
     name: "Dashboard",
     component: () => import("@/views/Chat.vue"),

@@ -1,16 +1,21 @@
 import asyncio
+import os  # Added for robust path resolution
 from services.agent_service import AgentService
+from services.rag_service import FAISSRAGService
 from models.run_history import Message as DBMessage, ChatSession
 from utils.helpers import make_serializable
 from datetime import datetime
 from pydantic import BaseModel
 from langchain_core.messages import AIMessage, HumanMessage
 from fastapi.responses import StreamingResponse
-from fastapi import APIRouter, Header, Request, HTTPException
+from fastapi import APIRouter, Header, Request, HTTPException, UploadFile, File, Form
 from uuid import uuid4
-from typing import Annotated, Any, List, Optional
+from typing import Annotated, Any, List, Optional, Union
 
 router = APIRouter()
+
+# Singleton RAG service instance (in-memory for now)
+rag_service = FAISSRAGService()
 
 
 class CreateChatRequest(BaseModel):
@@ -38,6 +43,7 @@ class StreamRequest(BaseModel):
 class Tool(BaseModel):
     name: str
     description: str
+
 
 class GetToolsResponse(BaseModel):
     tools: List[Tool]
@@ -114,12 +120,12 @@ async def stream_agent(
 
     agent_service: AgentService = request.app.state.agent_service
     agent_service.set_user_id(user_id)
-    
+
     try:
         print("Setting up streaming response")
         # Create human message for the agent
         human_message = HumanMessage(content=query.prompt)
-        
+
         # Use the updated agent_service.stream method with chat_id for message capture
         response = StreamingResponse(
             agent_service.stream(human_message, chat_id=query.chat_id),
@@ -215,7 +221,6 @@ async def get_tools(
     try:
         tools = agent_service.get_tools()
         tools = [{"name": t.name, "description": t.description} for t in tools]
-        print(tools)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return {"tools": tools}

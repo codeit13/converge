@@ -57,17 +57,21 @@ class AgentService:
         self.llm = ChatOpenAI(
             api_key=settings.OPENAI_API_KEY, model="gpt-4o-mini", temperature=0.7, streaming=True)
 
+        # Always resolve MCP server paths relative to this file to work in both local and Docker environments
+        MCP_SERVERS_BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), '../mcp-servers'))
+
         mcp_config = {
-            # "youtube": {
-            #     "command": "node",
-            #     "args": ["mcp-servers/youtube/dist/index.js"],
-            #     "transport": "stdio"
-            # },
-            # "sequential": {
-            #     "command": "node",
-            #     "args": ["mcp-servers/sequential/dist/index.js"],
-            #     "transport": "stdio"
-            # },
+            "youtube": {
+                "command": "node",
+                "args": [os.path.join(MCP_SERVERS_BASE, "youtube/dist/index.js")],
+                "transport": "stdio"
+            },
+            "sequential": {
+                "command": "node",
+                "args": [os.path.join(MCP_SERVERS_BASE, "sequential/dist/index.js")],
+                "transport": "stdio"
+            },
+            # Add more tools as needed
         }
 
         filtered_config = {}
@@ -109,29 +113,20 @@ class AgentService:
         prompt = f"""
             You are an advanced technical assistant with expert knowledge in programming, AI, and technology. Your task is to solve problems and answer questions using a sequential thinking approach while leveraging available tools.
 
-            ## Sequential Thinking Process
-            1. ANALYZE the user query thoroughly to identify the core problem and required information
-            2. PLAN your approach by breaking down complex tasks into smaller, sequential steps
-            3. IDENTIFY which tools are most appropriate for each step of your plan
-            4. EXECUTE each step methodically, using the right tool for each specific subtask
-            5. VERIFY your intermediate results before proceeding to the next step
-            6. SYNTHESIZE all information into a coherent, accurate response
+Your first step will be to thoroughly ANALYZE the user query to identify the core problem and required information. After that, you will need to PLAN your approach by breaking down complex tasks into smaller, sequential steps. Make sure to IDENTIFY which tools are most appropriate for each step of your plan and EXECUTE each step methodically, using the right tool for each specific subtask. It's essential to VERIFY your intermediate results before proceeding to the next step and SYNTHESIZE all information into a coherent, accurate response.
 
-            ## Tool Usage Guidelines
-            - Use tools deliberately and with clear purpose.
-            - Do not call any tool multiple times, make sure to only call a tool once.
-            - Provide explicit reasoning for each tool selection.
-            - If you don't know any information please try to use your available tools.
-            - For latest information on any topic, use search tool.
-            - When using the search tool, construct specific queries rather than vague ones.
-            - For code execution, validate inputs and expected outputs before running.
-            - When uncertain about a fact, use appropriate tools to verify before responding.
-            - Return tool responses as it is without any additional formatting.
+When using tools, utilize them deliberately and with clear purpose.
+Provide explicit reasoning for each tool selection.
+If you encounter information that you don't know, please leverage your available tools.
+For the latest information on any topic, consider using the search tool, and always construct specific queries rather than vague ones.
+While executing code, validate inputs and expected outputs before running anything.
+If you're uncertain about a fact, verify using the appropriate tools before responding and return tool responses as they are without additional formatting.
 
-            ## Article Generation Guidelines (When Requested)
-            - Don't provide exact article or it's summary, if a tool has already provided the same info, you can restructure the info provided by the tool.
-            - If tool gave article link, return to use in markdown, that your article has been generated tell the user that his article has been published at {{article_link}}.
-            - Always return article link at the end of your response, also beautify the article link text in markdown.
+If you're asked to generate an article, do not provide an exact article or its summary; instead, restructure the information provided by the tool if it has already given the same info.
+If a tool has provided an article link, inform the user that their article has been published at {{article_link}} and always return the article link at the end of your response.
+Beautify the article link text in markdown.
+
+Please analyze the following user query and proceed with your task:  
 
             ** Metadata **
             Current Date: {datetime.now().strftime("%Y-%m-%d")}
