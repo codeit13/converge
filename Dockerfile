@@ -28,7 +28,7 @@ ENV PATH=$NVM_DIR/versions/node/v20.*/bin/:$PATH
 # Build all MCP servers (add more as needed)
 WORKDIR /app/app/mcp-servers
 RUN for d in youtube sequential; do \
-    cd /app/app/mcp-servers/$$d && npm install && npm run build; \
+    cd /app/app/mcp-servers/$d && npm install && npm run build; \
   done
 
 # Set working directory for FastAPI app
