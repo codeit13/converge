@@ -59,18 +59,27 @@ class AgentService:
 
         # Always resolve MCP server paths relative to this file to work in both local and Docker environments
         # Updated for new Docker WORKDIR: /converge
-        MCP_SERVERS_BASE = '/converge/app/mcp-servers'
+        MCP_SERVERS_BASE = os.path.abspath(os.path.join(
+            os.path.dirname(__file__), '..', 'mcp-servers'))
 
         mcp_config = {
             "youtube": {
                 "command": "node",
                 "args": [os.path.join(MCP_SERVERS_BASE, "youtube/dist/index.js")],
-                "transport": "stdio"
+                "transport": "stdio",
+                "env": {
+                    **os.environ,
+                    "NODE_PATH": os.path.join(MCP_SERVERS_BASE, "youtube", "node_modules")
+                }
             },
             "sequential": {
                 "command": "node",
                 "args": [os.path.join(MCP_SERVERS_BASE, "sequential/dist/index.js")],
-                "transport": "stdio"
+                "transport": "stdio",
+                "env": {
+                    **os.environ,
+                    "NODE_PATH": os.path.join(MCP_SERVERS_BASE, "sequential", "node_modules")
+                }
             },
             # Add more tools as needed
         }

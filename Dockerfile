@@ -20,13 +20,13 @@ WORKDIR /converge/app/mcp-servers
 RUN echo "Listing contents of /converge/app/mcp-servers:" && ls -l /converge/app/mcp-servers && \
     for d in youtube sequential; do \
     echo "Building $d"; \
-    cd /converge/app/mcp-servers/$d && yarn install && yarn run build; \
+    cd /converge/app/mcp-servers/$d && yarn install; \
     done
 
 # Copy the rest of your app
 WORKDIR /converge
 COPY app/requirements.txt /converge/app/requirements.txt
-RUN pip install --no-cache-dir -r /converge/app/requirements.txt
+RUN pip install -r /converge/app/requirements.txt
 # RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash && \
 #     . "$NVM_DIR/nvm.sh" && \
 #     nvm install $NODE_VERSION && \
@@ -46,7 +46,7 @@ COPY . .
 EXPOSE 8001
 
 # Change working directory to where main.py is located
-WORKDIR /app/app
+WORKDIR /converge/app
 
 # Start the FastAPI application using uvicorn
 CMD ["python", "app.py"]
