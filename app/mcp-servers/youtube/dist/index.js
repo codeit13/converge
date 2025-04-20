@@ -4343,14 +4343,17 @@ var JSONRPCRequestSchema = z.object({
   jsonrpc: z.literal(JSONRPC_VERSION),
   id: RequestIdSchema
 }).merge(RequestSchema).strict();
+var isJSONRPCRequest = (value) => JSONRPCRequestSchema.safeParse(value).success;
 var JSONRPCNotificationSchema = z.object({
   jsonrpc: z.literal(JSONRPC_VERSION)
 }).merge(NotificationSchema).strict();
+var isJSONRPCNotification = (value) => JSONRPCNotificationSchema.safeParse(value).success;
 var JSONRPCResponseSchema = z.object({
   jsonrpc: z.literal(JSONRPC_VERSION),
   id: RequestIdSchema,
   result: ResultSchema
 }).strict();
+var isJSONRPCResponse = (value) => JSONRPCResponseSchema.safeParse(value).success;
 var ErrorCode;
 (function(ErrorCode2) {
   ErrorCode2[ErrorCode2["ConnectionClosed"] = -32e3] = "ConnectionClosed";
@@ -4379,6 +4382,7 @@ var JSONRPCErrorSchema = z.object({
     data: z.optional(z.unknown())
   })
 }).strict();
+var isJSONRPCError = (value) => JSONRPCErrorSchema.safeParse(value).success;
 var JSONRPCMessageSchema = z.union([
   JSONRPCRequestSchema,
   JSONRPCNotificationSchema,
@@ -4444,6 +4448,10 @@ var ServerCapabilitiesSchema = z.object({
    * Present if the server supports sending log messages to the client.
    */
   logging: z.optional(z.object({}).passthrough()),
+  /**
+   * Present if the server supports sending completions to the client.
+   */
+  completions: z.optional(z.object({}).passthrough()),
   /**
    * Present if the server offers any prompt templates.
    */
@@ -4716,6 +4724,17 @@ var ImageContentSchema = z.object({
    */
   mimeType: z.string()
 }).passthrough();
+var AudioContentSchema = z.object({
+  type: z.literal("audio"),
+  /**
+   * The base64-encoded audio data.
+   */
+  data: z.string().base64(),
+  /**
+   * The MIME type of the audio. Different providers may support different audio types.
+   */
+  mimeType: z.string()
+}).passthrough();
 var EmbeddedResourceSchema = z.object({
   type: z.literal("resource"),
   resource: z.union([TextResourceContentsSchema, BlobResourceContentsSchema])
@@ -4725,6 +4744,7 @@ var PromptMessageSchema = z.object({
   content: z.union([
     TextContentSchema,
     ImageContentSchema,
+    AudioContentSchema,
     EmbeddedResourceSchema
   ])
 }).passthrough();
@@ -4762,7 +4782,7 @@ var ListToolsResultSchema = PaginatedResultSchema.extend({
   tools: z.array(ToolSchema)
 });
 var CallToolResultSchema = ResultSchema.extend({
-  content: z.array(z.union([TextContentSchema, ImageContentSchema, EmbeddedResourceSchema])),
+  content: z.array(z.union([TextContentSchema, ImageContentSchema, AudioContentSchema, EmbeddedResourceSchema])),
   isError: z.boolean().default(false).optional()
 });
 var CompatibilityCallToolResultSchema = CallToolResultSchema.or(ResultSchema.extend({
@@ -4840,7 +4860,7 @@ var ModelPreferencesSchema = z.object({
 }).passthrough();
 var SamplingMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
-  content: z.union([TextContentSchema, ImageContentSchema])
+  content: z.union([TextContentSchema, ImageContentSchema, AudioContentSchema])
 }).passthrough();
 var CreateMessageRequestSchema = RequestSchema.extend({
   method: z.literal("sampling/createMessage"),
@@ -4882,7 +4902,8 @@ var CreateMessageResultSchema = ResultSchema.extend({
   role: z.enum(["user", "assistant"]),
   content: z.discriminatedUnion("type", [
     TextContentSchema,
-    ImageContentSchema
+    ImageContentSchema,
+    AudioContentSchema
   ])
 });
 var ResourceReferenceSchema = z.object({
@@ -5039,12 +5060,13 @@ var Protocol = class {
       (_request) => ({})
     );
   }
-  _setupTimeout(messageId, timeout, maxTotalTimeout, onTimeout) {
+  _setupTimeout(messageId, timeout, maxTotalTimeout, onTimeout, resetTimeoutOnProgress = false) {
     this._timeoutInfo.set(messageId, {
       timeoutId: setTimeout(onTimeout, timeout),
       startTime: Date.now(),
       timeout,
       maxTotalTimeout,
+      resetTimeoutOnProgress,
       onTimeout
     });
   }
@@ -5081,13 +5103,15 @@ var Protocol = class {
     this._transport.onerror = (error) => {
       this._onerror(error);
     };
-    this._transport.onmessage = (message) => {
-      if (!("method" in message)) {
+    this._transport.onmessage = (message, extra) => {
+      if (isJSONRPCResponse(message) || isJSONRPCError(message)) {
         this._onresponse(message);
-      } else if ("id" in message) {
-        this._onrequest(message);
-      } else {
+      } else if (isJSONRPCRequest(message)) {
+        this._onrequest(message, extra);
+      } else if (isJSONRPCNotification(message)) {
         this._onnotification(message);
+      } else {
+        this._onerror(new Error(`Unknown message type: ${JSON.stringify(message)}`));
       }
     };
     await this._transport.start();
@@ -5116,7 +5140,7 @@ var Protocol = class {
     }
     Promise.resolve().then(() => handler(notification)).catch((error) => this._onerror(new Error(`Uncaught error in notification handler: ${error}`)));
   }
-  _onrequest(request) {
+  _onrequest(request, extra) {
     var _a, _b, _c;
     const handler = (_a = this._requestHandlers.get(request.method)) !== null && _a !== void 0 ? _a : this.fallbackRequestHandler;
     if (handler === void 0) {
@@ -5132,11 +5156,14 @@ var Protocol = class {
     }
     const abortController = new AbortController();
     this._requestHandlerAbortControllers.set(request.id, abortController);
-    const extra = {
+    const fullExtra = {
       signal: abortController.signal,
-      sessionId: (_c = this._transport) === null || _c === void 0 ? void 0 : _c.sessionId
+      sessionId: (_c = this._transport) === null || _c === void 0 ? void 0 : _c.sessionId,
+      sendNotification: (notification) => this.notification(notification, { relatedRequestId: request.id }),
+      sendRequest: (r, resultSchema, options) => this.request(r, resultSchema, { ...options, relatedRequestId: request.id }),
+      authInfo: extra === null || extra === void 0 ? void 0 : extra.authInfo
     };
-    Promise.resolve().then(() => handler(request, extra)).then((result) => {
+    Promise.resolve().then(() => handler(request, fullExtra)).then((result) => {
       var _a2;
       if (abortController.signal.aborted) {
         return;
@@ -5172,7 +5199,8 @@ var Protocol = class {
       return;
     }
     const responseHandler = this._responseHandlers.get(messageId);
-    if (this._timeoutInfo.has(messageId) && responseHandler) {
+    const timeoutInfo = this._timeoutInfo.get(messageId);
+    if (timeoutInfo && responseHandler && timeoutInfo.resetTimeoutOnProgress) {
       try {
         this._resetTimeout(messageId);
       } catch (error) {
@@ -5192,7 +5220,7 @@ var Protocol = class {
     this._responseHandlers.delete(messageId);
     this._progressHandlers.delete(messageId);
     this._cleanupTimeout(messageId);
-    if ("result" in response) {
+    if (isJSONRPCResponse(response)) {
       handler(response);
     } else {
       const error = new McpError(response.error.code, response.error.message, response.error.data);
@@ -5215,8 +5243,9 @@ var Protocol = class {
    * Do not use this method to emit notifications! Use notification() instead.
    */
   request(request, resultSchema, options) {
+    const { relatedRequestId, resumptionToken, onresumptiontoken } = options !== null && options !== void 0 ? options : {};
     return new Promise((resolve6, reject) => {
-      var _a, _b, _c, _d;
+      var _a, _b, _c, _d, _e;
       if (!this._transport) {
         reject(new Error("Not connected"));
         return;
@@ -5250,7 +5279,7 @@ var Protocol = class {
             requestId: messageId,
             reason: String(reason)
           }
-        }).catch((error) => this._onerror(new Error(`Failed to send cancellation: ${error}`)));
+        }, { relatedRequestId, resumptionToken, onresumptiontoken }).catch((error) => this._onerror(new Error(`Failed to send cancellation: ${error}`)));
         reject(reason);
       };
       this._responseHandlers.set(messageId, (response) => {
@@ -5274,8 +5303,8 @@ var Protocol = class {
       });
       const timeout = (_d = options === null || options === void 0 ? void 0 : options.timeout) !== null && _d !== void 0 ? _d : DEFAULT_REQUEST_TIMEOUT_MSEC;
       const timeoutHandler = () => cancel(new McpError(ErrorCode.RequestTimeout, "Request timed out", { timeout }));
-      this._setupTimeout(messageId, timeout, options === null || options === void 0 ? void 0 : options.maxTotalTimeout, timeoutHandler);
-      this._transport.send(jsonrpcRequest).catch((error) => {
+      this._setupTimeout(messageId, timeout, options === null || options === void 0 ? void 0 : options.maxTotalTimeout, timeoutHandler, (_e = options === null || options === void 0 ? void 0 : options.resetTimeoutOnProgress) !== null && _e !== void 0 ? _e : false);
+      this._transport.send(jsonrpcRequest, { relatedRequestId, resumptionToken, onresumptiontoken }).catch((error) => {
         this._cleanupTimeout(messageId);
         reject(error);
       });
@@ -5284,7 +5313,7 @@ var Protocol = class {
   /**
    * Emits a notification, which is a one-way message that does not expect a response.
    */
-  async notification(notification) {
+  async notification(notification, options) {
     if (!this._transport) {
       throw new Error("Not connected");
     }
@@ -5293,7 +5322,7 @@ var Protocol = class {
       ...notification,
       jsonrpc: "2.0"
     };
-    await this._transport.send(jsonrpcNotification);
+    await this._transport.send(jsonrpcNotification, options);
   }
   /**
    * Registers a handler to invoke when this protocol object receives a request with the given method.
@@ -5303,7 +5332,9 @@ var Protocol = class {
   setRequestHandler(requestSchema, handler) {
     const method = requestSchema.shape.method.value;
     this.assertRequestHandlerCapability(method);
-    this._requestHandlers.set(method, (request, extra) => Promise.resolve(handler(requestSchema.parse(request), extra)));
+    this._requestHandlers.set(method, (request, extra) => {
+      return Promise.resolve(handler(requestSchema.parse(request), extra));
+    });
   }
   /**
    * Removes the request handler for the given method.
@@ -6846,10 +6877,12 @@ var McpServer = class {
     this.server.assertCanSetRequestHandler(ListToolsRequestSchema.shape.method.value);
     this.server.assertCanSetRequestHandler(CallToolRequestSchema.shape.method.value);
     this.server.registerCapabilities({
-      tools: {}
+      tools: {
+        listChanged: true
+      }
     });
     this.server.setRequestHandler(ListToolsRequestSchema, () => ({
-      tools: Object.entries(this._registeredTools).map(([name, tool]) => {
+      tools: Object.entries(this._registeredTools).filter(([, tool]) => tool.enabled).map(([name, tool]) => {
         return {
           name,
           description: tool.description,
@@ -6863,6 +6896,9 @@ var McpServer = class {
       const tool = this._registeredTools[request.params.name];
       if (!tool) {
         throw new McpError(ErrorCode.InvalidParams, `Tool ${request.params.name} not found`);
+      }
+      if (!tool.enabled) {
+        throw new McpError(ErrorCode.InvalidParams, `Tool ${request.params.name} disabled`);
       }
       if (tool.inputSchema) {
         const parseResult = await tool.inputSchema.safeParseAsync(request.params.arguments);
@@ -6923,7 +6959,10 @@ var McpServer = class {
   async handlePromptCompletion(request, ref) {
     const prompt = this._registeredPrompts[ref.name];
     if (!prompt) {
-      throw new McpError(ErrorCode.InvalidParams, `Prompt ${request.params.ref.name} not found`);
+      throw new McpError(ErrorCode.InvalidParams, `Prompt ${ref.name} not found`);
+    }
+    if (!prompt.enabled) {
+      throw new McpError(ErrorCode.InvalidParams, `Prompt ${ref.name} disabled`);
     }
     if (!prompt.argsSchema) {
       return EMPTY_COMPLETION_RESULT;
@@ -6959,10 +6998,12 @@ var McpServer = class {
     this.server.assertCanSetRequestHandler(ListResourceTemplatesRequestSchema.shape.method.value);
     this.server.assertCanSetRequestHandler(ReadResourceRequestSchema.shape.method.value);
     this.server.registerCapabilities({
-      resources: {}
+      resources: {
+        listChanged: true
+      }
     });
     this.server.setRequestHandler(ListResourcesRequestSchema, async (request, extra) => {
-      const resources = Object.entries(this._registeredResources).map(([uri, resource]) => ({
+      const resources = Object.entries(this._registeredResources).filter(([_, resource]) => resource.enabled).map(([uri, resource]) => ({
         uri,
         name: resource.name,
         ...resource.metadata
@@ -6994,6 +7035,9 @@ var McpServer = class {
       const uri = new URL(request.params.uri);
       const resource = this._registeredResources[uri.toString()];
       if (resource) {
+        if (!resource.enabled) {
+          throw new McpError(ErrorCode.InvalidParams, `Resource ${uri} disabled`);
+        }
         return resource.readCallback(uri, extra);
       }
       for (const template of Object.values(this._registeredResourceTemplates)) {
@@ -7014,10 +7058,12 @@ var McpServer = class {
     this.server.assertCanSetRequestHandler(ListPromptsRequestSchema.shape.method.value);
     this.server.assertCanSetRequestHandler(GetPromptRequestSchema.shape.method.value);
     this.server.registerCapabilities({
-      prompts: {}
+      prompts: {
+        listChanged: true
+      }
     });
     this.server.setRequestHandler(ListPromptsRequestSchema, () => ({
-      prompts: Object.entries(this._registeredPrompts).map(([name, prompt]) => {
+      prompts: Object.entries(this._registeredPrompts).filter(([, prompt]) => prompt.enabled).map(([name, prompt]) => {
         return {
           name,
           description: prompt.description,
@@ -7029,6 +7075,9 @@ var McpServer = class {
       const prompt = this._registeredPrompts[request.params.name];
       if (!prompt) {
         throw new McpError(ErrorCode.InvalidParams, `Prompt ${request.params.name} not found`);
+      }
+      if (!prompt.enabled) {
+        throw new McpError(ErrorCode.InvalidParams, `Prompt ${request.params.name} disabled`);
       }
       if (prompt.argsSchema) {
         const parseResult = await prompt.argsSchema.safeParseAsync(request.params.arguments);
@@ -7056,22 +7105,69 @@ var McpServer = class {
       if (this._registeredResources[uriOrTemplate]) {
         throw new Error(`Resource ${uriOrTemplate} is already registered`);
       }
-      this._registeredResources[uriOrTemplate] = {
+      const registeredResource = {
         name,
         metadata,
-        readCallback
+        readCallback,
+        enabled: true,
+        disable: () => registeredResource.update({ enabled: false }),
+        enable: () => registeredResource.update({ enabled: true }),
+        remove: () => registeredResource.update({ uri: null }),
+        update: (updates) => {
+          if (typeof updates.uri !== "undefined" && updates.uri !== uriOrTemplate) {
+            delete this._registeredResources[uriOrTemplate];
+            if (updates.uri)
+              this._registeredResources[updates.uri] = registeredResource;
+          }
+          if (typeof updates.name !== "undefined")
+            registeredResource.name = updates.name;
+          if (typeof updates.metadata !== "undefined")
+            registeredResource.metadata = updates.metadata;
+          if (typeof updates.callback !== "undefined")
+            registeredResource.readCallback = updates.callback;
+          if (typeof updates.enabled !== "undefined")
+            registeredResource.enabled = updates.enabled;
+          this.sendResourceListChanged();
+        }
       };
+      this._registeredResources[uriOrTemplate] = registeredResource;
+      this.setResourceRequestHandlers();
+      this.sendResourceListChanged();
+      return registeredResource;
     } else {
       if (this._registeredResourceTemplates[name]) {
         throw new Error(`Resource template ${name} is already registered`);
       }
-      this._registeredResourceTemplates[name] = {
+      const registeredResourceTemplate = {
         resourceTemplate: uriOrTemplate,
         metadata,
-        readCallback
+        readCallback,
+        enabled: true,
+        disable: () => registeredResourceTemplate.update({ enabled: false }),
+        enable: () => registeredResourceTemplate.update({ enabled: true }),
+        remove: () => registeredResourceTemplate.update({ name: null }),
+        update: (updates) => {
+          if (typeof updates.name !== "undefined" && updates.name !== name) {
+            delete this._registeredResourceTemplates[name];
+            if (updates.name)
+              this._registeredResourceTemplates[updates.name] = registeredResourceTemplate;
+          }
+          if (typeof updates.template !== "undefined")
+            registeredResourceTemplate.resourceTemplate = updates.template;
+          if (typeof updates.metadata !== "undefined")
+            registeredResourceTemplate.metadata = updates.metadata;
+          if (typeof updates.callback !== "undefined")
+            registeredResourceTemplate.readCallback = updates.callback;
+          if (typeof updates.enabled !== "undefined")
+            registeredResourceTemplate.enabled = updates.enabled;
+          this.sendResourceListChanged();
+        }
       };
+      this._registeredResourceTemplates[name] = registeredResourceTemplate;
+      this.setResourceRequestHandlers();
+      this.sendResourceListChanged();
+      return registeredResourceTemplate;
     }
-    this.setResourceRequestHandlers();
   }
   tool(name, ...rest) {
     if (this._registeredTools[name]) {
@@ -7086,12 +7182,35 @@ var McpServer = class {
       paramsSchema = rest.shift();
     }
     const cb = rest[0];
-    this._registeredTools[name] = {
+    const registeredTool = {
       description,
       inputSchema: paramsSchema === void 0 ? void 0 : z.object(paramsSchema),
-      callback: cb
+      callback: cb,
+      enabled: true,
+      disable: () => registeredTool.update({ enabled: false }),
+      enable: () => registeredTool.update({ enabled: true }),
+      remove: () => registeredTool.update({ name: null }),
+      update: (updates) => {
+        if (typeof updates.name !== "undefined" && updates.name !== name) {
+          delete this._registeredTools[name];
+          if (updates.name)
+            this._registeredTools[updates.name] = registeredTool;
+        }
+        if (typeof updates.description !== "undefined")
+          registeredTool.description = updates.description;
+        if (typeof updates.paramsSchema !== "undefined")
+          registeredTool.inputSchema = z.object(updates.paramsSchema);
+        if (typeof updates.callback !== "undefined")
+          registeredTool.callback = updates.callback;
+        if (typeof updates.enabled !== "undefined")
+          registeredTool.enabled = updates.enabled;
+        this.sendToolListChanged();
+      }
     };
+    this._registeredTools[name] = registeredTool;
     this.setToolRequestHandlers();
+    this.sendToolListChanged();
+    return registeredTool;
   }
   prompt(name, ...rest) {
     if (this._registeredPrompts[name]) {
@@ -7106,12 +7225,66 @@ var McpServer = class {
       argsSchema = rest.shift();
     }
     const cb = rest[0];
-    this._registeredPrompts[name] = {
+    const registeredPrompt = {
       description,
       argsSchema: argsSchema === void 0 ? void 0 : z.object(argsSchema),
-      callback: cb
+      callback: cb,
+      enabled: true,
+      disable: () => registeredPrompt.update({ enabled: false }),
+      enable: () => registeredPrompt.update({ enabled: true }),
+      remove: () => registeredPrompt.update({ name: null }),
+      update: (updates) => {
+        if (typeof updates.name !== "undefined" && updates.name !== name) {
+          delete this._registeredPrompts[name];
+          if (updates.name)
+            this._registeredPrompts[updates.name] = registeredPrompt;
+        }
+        if (typeof updates.description !== "undefined")
+          registeredPrompt.description = updates.description;
+        if (typeof updates.argsSchema !== "undefined")
+          registeredPrompt.argsSchema = z.object(updates.argsSchema);
+        if (typeof updates.callback !== "undefined")
+          registeredPrompt.callback = updates.callback;
+        if (typeof updates.enabled !== "undefined")
+          registeredPrompt.enabled = updates.enabled;
+        this.sendPromptListChanged();
+      }
     };
+    this._registeredPrompts[name] = registeredPrompt;
     this.setPromptRequestHandlers();
+    this.sendPromptListChanged();
+    return registeredPrompt;
+  }
+  /**
+   * Checks if the server is connected to a transport.
+   * @returns True if the server is connected
+   */
+  isConnected() {
+    return this.server.transport !== void 0;
+  }
+  /**
+   * Sends a resource list changed event to the client, if connected.
+   */
+  sendResourceListChanged() {
+    if (this.isConnected()) {
+      this.server.sendResourceListChanged();
+    }
+  }
+  /**
+   * Sends a tool list changed event to the client, if connected.
+   */
+  sendToolListChanged() {
+    if (this.isConnected()) {
+      this.server.sendToolListChanged();
+    }
+  }
+  /**
+   * Sends a prompt list changed event to the client, if connected.
+   */
+  sendPromptListChanged() {
+    if (this.isConnected()) {
+      this.server.sendPromptListChanged();
+    }
   }
 };
 var EMPTY_OBJECT_JSON_SCHEMA = {
@@ -7156,7 +7329,7 @@ var ReadBuffer = class {
     if (index === -1) {
       return null;
     }
-    const line = this._buffer.toString("utf8", 0, index);
+    const line = this._buffer.toString("utf8", 0, index).replace(/\r$/, "");
     this._buffer = this._buffer.subarray(index + 1);
     return deserializeMessage(line);
   }
@@ -8660,6 +8833,7 @@ var LRUCache = class _LRUCache {
   #max;
   #maxSize;
   #dispose;
+  #onInsert;
   #disposeAfter;
   #fetchMethod;
   #memoMethod;
@@ -8741,6 +8915,7 @@ var LRUCache = class _LRUCache {
   #hasDispose;
   #hasFetchMethod;
   #hasDisposeAfter;
+  #hasOnInsert;
   /**
    * Do not call this method unless you need to inspect the
    * inner workings of the cache.  If anything returned by this
@@ -8818,13 +8993,19 @@ var LRUCache = class _LRUCache {
     return this.#dispose;
   }
   /**
+   * {@link LRUCache.OptionsBase.onInsert} (read-only)
+   */
+  get onInsert() {
+    return this.#onInsert;
+  }
+  /**
    * {@link LRUCache.OptionsBase.disposeAfter} (read-only)
    */
   get disposeAfter() {
     return this.#disposeAfter;
   }
   constructor(options) {
-    const { max = 0, ttl, ttlResolution = 1, ttlAutopurge, updateAgeOnGet, updateAgeOnHas, allowStale, dispose, disposeAfter, noDisposeOnSet, noUpdateTTL, maxSize = 0, maxEntrySize = 0, sizeCalculation, fetchMethod, memoMethod, noDeleteOnFetchRejection, noDeleteOnStaleGet, allowStaleOnFetchRejection, allowStaleOnFetchAbort, ignoreFetchAbort } = options;
+    const { max = 0, ttl, ttlResolution = 1, ttlAutopurge, updateAgeOnGet, updateAgeOnHas, allowStale, dispose, onInsert, disposeAfter, noDisposeOnSet, noUpdateTTL, maxSize = 0, maxEntrySize = 0, sizeCalculation, fetchMethod, memoMethod, noDeleteOnFetchRejection, noDeleteOnStaleGet, allowStaleOnFetchRejection, allowStaleOnFetchAbort, ignoreFetchAbort } = options;
     if (max !== 0 && !isPosInt(max)) {
       throw new TypeError("max option must be a nonnegative integer");
     }
@@ -8866,6 +9047,9 @@ var LRUCache = class _LRUCache {
     if (typeof dispose === "function") {
       this.#dispose = dispose;
     }
+    if (typeof onInsert === "function") {
+      this.#onInsert = onInsert;
+    }
     if (typeof disposeAfter === "function") {
       this.#disposeAfter = disposeAfter;
       this.#disposed = [];
@@ -8874,6 +9058,7 @@ var LRUCache = class _LRUCache {
       this.#disposed = void 0;
     }
     this.#hasDispose = !!this.#dispose;
+    this.#hasOnInsert = !!this.#onInsert;
     this.#hasDisposeAfter = !!this.#disposeAfter;
     this.noDisposeOnSet = !!noDisposeOnSet;
     this.noUpdateTTL = !!noUpdateTTL;
@@ -9387,6 +9572,9 @@ var LRUCache = class _LRUCache {
       if (status)
         status.set = "add";
       noUpdateTTL = false;
+      if (this.#hasOnInsert) {
+        this.#onInsert?.(v, k, "add");
+      }
     } else {
       this.#moveToTail(index);
       const oldVal = this.#valList[index];
@@ -9421,6 +9609,9 @@ var LRUCache = class _LRUCache {
         }
       } else if (status) {
         status.set = "update";
+      }
+      if (this.#hasOnInsert) {
+        this.onInsert?.(v, k, v === oldVal ? "update" : "replace");
       }
     }
     if (ttl !== 0 && !this.#ttls) {
