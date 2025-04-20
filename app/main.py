@@ -35,9 +35,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Converge API", version="1.0.0", lifespan=lifespan)
 
+# CORS must not use '*' when allow_credentials=True; use the specific frontend origin.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://ai.sleebit.com", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,6 +47,11 @@ app.add_middleware(
 app.include_router(agent_router, prefix="/api")
 app.include_router(analytics_router, prefix="/api/analytics")
 app.include_router(rag_router, prefix="/api/rag")
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 
 def handle_shutdown_signal(signal, frame):
