@@ -221,6 +221,8 @@ async def get_tools(
     try:
         tools = agent_service.get_tools()
         tools = [{"name": t.name, "description": t.description} for t in tools]
+        tools.append({"name": "Reel Generator",
+                     "description": "Generate a reel based on the given prompt"})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return {"tools": tools}
