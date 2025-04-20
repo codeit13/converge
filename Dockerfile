@@ -12,21 +12,20 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl wget ffmpeg yt-dlp ca-certificates gnupg && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy MCP servers first
-COPY app/mcp-servers /converge/app/mcp-servers
+COPY . .
 
-# Build all MCP servers (add more as needed)
+# Build all MCP servers
 WORKDIR /converge/app/mcp-servers
 RUN echo "Listing contents of /converge/app/mcp-servers:" && ls -l /converge/app/mcp-servers && \
-    for d in youtube sequential; do \
+    for d in youtube sequential; do \ 
     echo "Building $d"; \
     cd /converge/app/mcp-servers/$d && yarn install; \
     done
 
 # Copy the rest of your app
 WORKDIR /converge
-COPY app/requirements.txt /converge/app/requirements.txt
 RUN pip install -r /converge/app/requirements.txt
+
 # RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash && \
 #     . "$NVM_DIR/nvm.sh" && \
 #     nvm install $NODE_VERSION && \
@@ -36,8 +35,7 @@ RUN pip install -r /converge/app/requirements.txt
 #     ln -sf "$NVM_DIR/versions/node/v$NODE_VERSION/bin/npm" /usr/local/bin/npm && \
 #     npm install -g yarn
 
-# Copy the entire project into the container
-COPY . .
+
 
 # Copy Supervisor configuration file into the container if you use it
 #COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
