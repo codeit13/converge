@@ -16,45 +16,57 @@ const createEventSourceWithAuth = (url, token) => {
 export default {
   // RAG: Add document
   async ragAddDocument({ commit }, { sourceType, content, file }) {
+    commit("SET_IS_LOADING", true);
     try {
       const formData = new FormData();
       formData.append("source_type", sourceType);
       if (content) formData.append("content", content);
       if (file) formData.append("file", file);
       const res = await axios.post(`${BACKEND_URL}/api/rag/documents`, formData);
+      commit("SET_IS_LOADING", false);
       return res.data;
     } catch (error) {
+      commit("SET_IS_LOADING", false);
       commit("SET_TOASTER_DATA", { type: "error", message: "Failed to add document." });
       throw error;
     }
   },
   // RAG: Get all documents
   async ragGetDocuments({ commit }) {
+    commit("SET_IS_LOADING", true);
     try {
       const res = await axios.get(`${BACKEND_URL}/api/rag/documents`);
       commit("SET_RAG_DOCUMENTS", res.data.documents);
+      commit("SET_IS_LOADING", false);
       return res.data.documents;
     } catch (error) {
+      commit("SET_IS_LOADING", false);
       commit("SET_TOASTER_DATA", { type: "error", message: "Failed to fetch documents." });
       throw error;
     }
   },
   // RAG: Delete document
   async ragDeleteDocument({ commit }, docId) {
+    commit("SET_IS_LOADING", true);
     try {
       await axios.delete(`${BACKEND_URL}/api/rag/documents/${docId}`);
+      commit("SET_IS_LOADING", false);
       commit("SET_TOASTER_DATA", { type: "success", message: "Document deleted." });
     } catch (error) {
+      commit("SET_IS_LOADING", false);
       commit("SET_TOASTER_DATA", { type: "error", message: "Failed to delete document." });
       throw error;
     }
   },
   // RAG: Search documents
   async ragSearchDocuments({ commit }, { query, k = 5 }) {
+    commit("SET_IS_LOADING", true);
     try {
       const res = await axios.post(`${BACKEND_URL}/api/rag/search`, { query, k });
+      commit("SET_IS_LOADING", false);
       return res.data.results;
     } catch (error) {
+      commit("SET_IS_LOADING", false);
       commit("SET_TOASTER_DATA", { type: "error", message: "Search failed." });
       throw error;
     }

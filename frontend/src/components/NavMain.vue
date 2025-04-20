@@ -164,8 +164,6 @@ export default {
     },
 
     navigateToRoute(url) {
-      console.log("navigating to :", url, window.innerWidth < 768);
-
       if (window.innerWidth < 768) {
         this.$store.commit("SET_SIDEBAR_OPEN", false);
       }

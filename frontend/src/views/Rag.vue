@@ -475,102 +475,23 @@
               <!-- Single Accordion for all documents -->
               <Accordion :collapsible="true" class="border-none space-y-4">
                 <!-- Document Cards as AccordionItems -->
-                <AccordionItem 
+                <AccordionItem
                   v-for="doc in documents"
                   :key="doc.doc_id"
-                  :value="doc.doc_id" 
+                  :value="doc.doc_id"
                   class="border-none rounded-xl border border-zinc-200 dark:border-zinc-700 bg-primary/10 dark:bg-secondary/10 hover:shadow-md transition-all duration-200 overflow-hidden group"
                 >
-                    <!-- Card Header and Preview Content -->
-                    <div class="p-4">
-                      <!-- Document Header with Icon and Delete Button -->
-                      <div class="flex items-start justify-between gap-3">
-                        <div class="flex items-start gap-3">
-                          <div
-                            class="p-2 rounded-md bg-primary/5 dark:bg-primary/10 flex-shrink-0"
-                          >
-                            <!-- Document icon based on source type if available -->
-                            <svg
-                              v-if="getDocSourceType(doc) === 'url'"
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              stroke-width="2"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              class="text-zinc-600 dark:text-zinc-300"
-                            >
-                              <path
-                                d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-                              ></path>
-                              <path
-                                d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-                              ></path>
-                            </svg>
-                            <svg
-                              v-else-if="getDocSourceType(doc) === 'file'"
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              stroke-width="2"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              class="text-zinc-600 dark:text-zinc-300"
-                            >
-                              <path
-                                d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
-                              ></path>
-                              <polyline points="14 2 14 8 20 8"></polyline>
-                            </svg>
-                            <svg
-                              v-else
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              stroke-width="2"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              class="text-zinc-600 dark:text-zinc-300"
-                            >
-                              <path
-                                d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                              ></path>
-                              <path d="M14 2v6h6"></path>
-                              <path d="M16 13H8"></path>
-                              <path d="M16 17H8"></path>
-                              <path d="M10 9H8"></path>
-                            </svg>
-                          </div>
-                          <div class="flex-1 min-w-0">
-                            <h4
-                              class="text-base font-medium text-zinc-800 dark:text-zinc-200 truncate"
-                            >
-                              {{ getDocTitle(doc) }}
-                            </h4>
-                            <p
-                              class="text-xs text-zinc-500 dark:text-zinc-400 truncate"
-                            >
-                              ID: {{ shortenDocId(doc.doc_id) }}
-                            </p>
-                          </div>
-                        </div>
-
-                        <!-- Delete Button (only visible on hover) -->
-                        <button
-                          @click.stop="confirmDelete(doc.doc_id)"
-                          class="text-zinc-400 hover:text-red-500 dark:text-zinc-500 dark:hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                          title="Delete document"
+                  <!-- Card Header and Preview Content -->
+                  <div class="p-4">
+                    <!-- Document Header with Icon and Delete Button -->
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="flex items-start gap-3">
+                        <div
+                          class="p-2 rounded-md bg-primary/5 dark:bg-primary/10 flex-shrink-0"
                         >
+                          <!-- Document icon based on source type if available -->
                           <svg
+                            v-if="getDocSourceType(doc) === 'url'"
                             xmlns="http://www.w3.org/2000/svg"
                             width="16"
                             height="16"
@@ -580,41 +501,7 @@
                             stroke-width="2"
                             stroke-linecap="round"
                             stroke-linejoin="round"
-                          >
-                            <path d="M3 6h18"></path>
-                            <path
-                              d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"
-                            ></path>
-                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                          </svg>
-                        </button>
-                      </div>
-
-                      <!-- Document Content Preview -->
-                      <p
-                        class="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2 mt-2"
-                      >
-                        {{ doc.content_preview }}
-                      </p>
-
-                      <!-- Basic Metadata Preview -->
-                      <div class="mt-2 space-y-1">
-                        <!-- Source URL with icon if available -->
-                        <div
-                          v-if="getDocMetadata(doc, 'source')"
-                          class="flex items-center gap-1.5 text-xs font-bold text-zinc-500 dark:text-zinc-400"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            class="text-secondary dark:text-secondary"
+                            class="text-zinc-600 dark:text-zinc-300"
                           >
                             <path
                               d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
@@ -623,93 +510,206 @@
                               d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
                             ></path>
                           </svg>
-                          <a
-                            :href="getDocMetadata(doc, 'source')"
-                            target="_blank"
-                            class="text-secondary dark:text-secondary truncate"
-                            title="Open source URL"
-                          >
-                            {{ formatUrl(getDocMetadata(doc, "source")) }}
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Accordion Trigger for Details -->
-                    <AccordionTrigger
-                      class="px-4 py-2 text-xs text-primary hover:text-primary/80 dark:text-primary-foreground dark:hover:text-primary-foreground/80 transition-colors border-t border-zinc-100 dark:border-zinc-700/50 hover:bg-primary/5 dark:hover:bg-primary/10"
-                    >
-                      <span>View Details</span>
-                    </AccordionTrigger>
-
-                    <!-- Accordion Content with Full Details -->
-                    <AccordionContent
-                      class="px-4 pb-4 pt-2 bg-zinc-50 dark:bg-zinc-800/80 border-t border-zinc-100 dark:border-zinc-700/50"
-                    >
-                      <div class="space-y-3">
-                        <!-- Full Content Preview -->
-                        <div>
-                          <div
-                            class="text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1"
-                          >
-                            Content:
-                          </div>
-                          <p class="text-sm text-zinc-600 dark:text-zinc-400">
-                            {{ doc.content_preview }}
-                          </p>
-                        </div>
-
-                        <!-- Language if available -->
-                        <div
-                          v-if="getDocMetadata(doc, 'language')"
-                          class="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400"
-                        >
                           <svg
+                            v-else-if="getDocSourceType(doc) === 'file'"
                             xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
+                            width="16"
+                            height="16"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
                             stroke-width="2"
                             stroke-linecap="round"
                             stroke-linejoin="round"
-                            class="text-primary dark:text-primary-foreground"
+                            class="text-zinc-600 dark:text-zinc-300"
                           >
-                            <path d="m5 8 6 6"></path>
-                            <path d="m4 14 10-10 6 6-10 10-6-6z"></path>
+                            <path
+                              d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+                            ></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
                           </svg>
-                          <span class="capitalize">{{
-                            getDocMetadata(doc, "language")
-                          }}</span>
+                          <svg
+                            v-else
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="text-zinc-600 dark:text-zinc-300"
+                          >
+                            <path
+                              d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                            ></path>
+                            <path d="M14 2v6h6"></path>
+                            <path d="M16 13H8"></path>
+                            <path d="M16 17H8"></path>
+                            <path d="M10 9H8"></path>
+                          </svg>
                         </div>
-
-                        <!-- Description if available -->
-                        <div v-if="getDocMetadata(doc, 'description')">
-                          <div
-                            class="text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+                        <div class="flex-1 min-w-0">
+                          <h4
+                            class="text-base font-medium text-zinc-800 dark:text-zinc-200 truncate"
                           >
-                            Description:
-                          </div>
-                          <div class="text-xs text-zinc-600 dark:text-zinc-400">
-                            {{ getDocMetadata(doc, "description") }}
-                          </div>
-                        </div>
-
-                        <!-- Full metadata -->
-                        <div v-if="doc.metadata" class="pt-2">
-                          <div
-                            class="text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+                            {{ getDocTitle(doc) }}
+                          </h4>
+                          <p
+                            class="text-xs text-zinc-500 dark:text-zinc-400 truncate"
                           >
-                            Full Metadata:
-                          </div>
-                          <pre
-                            class="text-xs bg-secondary/5 dark:bg-secondary/10 p-2 rounded text-zinc-600 dark:text-zinc-300 overflow-x-auto scrollbar-thin"
-                            >{{ formatMetadata(doc.metadata) }}</pre
-                          >
+                            ID: {{ shortenDocId(doc.doc_id) }}
+                          </p>
                         </div>
                       </div>
-                    </AccordionContent>
+
+                      <!-- Delete Button (only visible on hover) -->
+                      <button
+                        @click.stop="confirmDelete(doc.doc_id)"
+                        class="text-zinc-400 hover:text-red-500 dark:text-zinc-500 dark:hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        title="Delete document"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path d="M3 6h18"></path>
+                          <path
+                            d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"
+                          ></path>
+                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                        </svg>
+                      </button>
+                    </div>
+
+                    <!-- Document Content Preview -->
+                    <p
+                      class="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2 mt-2"
+                    >
+                      {{ doc.content_preview }}
+                    </p>
+
+                    <!-- Basic Metadata Preview -->
+                    <div class="mt-2 space-y-1">
+                      <!-- Source URL with icon if available -->
+                      <div
+                        v-if="getDocMetadata(doc, 'source')"
+                        class="flex items-center gap-1.5 text-xs font-bold text-zinc-500 dark:text-zinc-400"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          class="text-secondary dark:text-secondary"
+                        >
+                          <path
+                            d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+                          ></path>
+                          <path
+                            d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+                          ></path>
+                        </svg>
+                        <a
+                          :href="getDocMetadata(doc, 'source')"
+                          target="_blank"
+                          class="text-secondary dark:text-secondary truncate"
+                          title="Open source URL"
+                        >
+                          {{ formatUrl(getDocMetadata(doc, "source")) }}
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Accordion Trigger for Details -->
+                  <AccordionTrigger
+                    class="px-4 py-2 text-xs text-black hover:text-black/80 dark:text-white dark:hover:text-white/80 transition-colors border-t border-zinc-100 dark:border-zinc-700/50 hover:bg-zinc-50 dark:hover:bg-zinc-800/80"
+                  >
+                    <span>View Details</span>
+                  </AccordionTrigger>
+
+                  <!-- Accordion Content with Full Details -->
+                  <AccordionContent
+                    class="px-4 pb-4 pt-2 bg-zinc-50 dark:bg-zinc-800/80 border-t border-zinc-100 dark:border-zinc-700/50"
+                  >
+                    <div class="space-y-3">
+                      <!-- Full Content Preview -->
+                      <div>
+                        <div
+                          class="text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+                        >
+                          Content:
+                        </div>
+                        <p class="text-sm text-zinc-600 dark:text-zinc-400">
+                          {{ doc.content_preview }}
+                        </p>
+                      </div>
+
+                      <!-- Language if available -->
+                      <div
+                        v-if="getDocMetadata(doc, 'language')"
+                        class="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          class="text-primary dark:text-primary-foreground"
+                        >
+                          <path d="m5 8 6 6"></path>
+                          <path d="m4 14 10-10 6 6-10 10-6-6z"></path>
+                        </svg>
+                        <span class="capitalize">{{
+                          getDocMetadata(doc, "language")
+                        }}</span>
+                      </div>
+
+                      <!-- Description if available -->
+                      <div v-if="getDocMetadata(doc, 'description')">
+                        <div
+                          class="text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+                        >
+                          Description:
+                        </div>
+                        <div class="text-xs text-zinc-600 dark:text-zinc-400">
+                          {{ getDocMetadata(doc, "description") }}
+                        </div>
+                      </div>
+
+                      <!-- Full metadata -->
+                      <div v-if="doc.metadata" class="pt-2">
+                        <div
+                          class="text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+                        >
+                          Full Metadata:
+                        </div>
+                        <pre
+                          class="text-xs bg-secondary/5 dark:bg-secondary/10 p-2 rounded text-zinc-600 dark:text-zinc-300 overflow-x-auto scrollbar-thin"
+                          >{{ formatMetadata(doc.metadata) }}</pre
+                        >
+                      </div>
+                    </div>
+                  </AccordionContent>
                 </AccordionItem>
               </Accordion>
             </div>
