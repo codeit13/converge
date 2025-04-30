@@ -318,7 +318,9 @@
               <Wrench class="h-4 w-4 text-muted-foreground" />
               <span class="text-sm font-medium">Tools</span>
             </div>
-            <div class="flex gap-2 overflow-x-auto whitespace-nowrap">
+            <div
+              class="flex gap-2 whitespace-nowrap w-[70vw] md:w-full overflow-x-auto"
+            >
               <Badge
                 v-for="tool in availableTools"
                 :key="tool.name"

@@ -1,0 +1,1 @@
+import{aY as r,p as u,D as o}from"./index-BEXXmzFv.js";function I(t){const a=r({nonce:u()});return o(()=>{var e;return(t==null?void 0:t.value)||((e=a.nonce)==null?void 0:e.value)})}function m(t,a=Number.NEGATIVE_INFINITY,e=Number.POSITIVE_INFINITY){return Math.min(e,Math.max(a,t))}export{m as c,I as u};

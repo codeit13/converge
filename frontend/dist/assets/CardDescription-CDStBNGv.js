@@ -1,0 +1,1 @@
+import{c as a,v as t,n as o,y as n,M as c,o as l}from"./index-BEXXmzFv.js";const m={__name:"CardDescription",props:{class:{type:null,required:!1}},setup(s){const e=s;return(r,p)=>(l(),a("p",{class:o(n(c)("text-sm text-muted-foreground",e.class))},[t(r.$slots,"default")],2))}};export{m as _};
